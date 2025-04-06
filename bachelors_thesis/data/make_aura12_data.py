@@ -1,3 +1,13 @@
+"""
+This script processes data for the AURA12 model. It is called by the dataset.py script.
+It takes the raw data and splits it into training, validation, and test sets based on the strat_fold column in the Y dataframe.
+As per the PTB-XL creators' recommendations, the first 8 folds are used for training, the 9th fold for validation,
+and the 10th fold for testing. This is because the records in folds 9 and 10 underwent at least one human validation so are of
+parcticularly high quality.
+The processed data is saved as .npy files in the PROCESSED_DATA_DIR/aura12 directory.
+The metadata is also saved as .npy files for the training, validation, and test sets respectively. This metadata includes extra
+information such as patient identifiers and biometric data, signal metadata, and ecg statements.
+"""
 from loguru import logger
 import numpy as np
 

@@ -1,7 +1,14 @@
+"""
+Loads the PTB-XL dataset from the source directory. Most of this code has been taken from the PTB-XL example data loading script.
+It is really slow right now, so I will look into optimizing it later.
+Link to the source: https://physionet.org/content/ptb-xl/1.0.3/
+"""
+
+import ast
+
 import numpy as np
 import pandas as pd
 import wfdb
-import ast
 
 
 def load_data(

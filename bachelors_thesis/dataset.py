@@ -1,3 +1,9 @@
+"""
+This script processes raw datasets. The script can be run from the command line and takes a dataset name as an argument.
+This CLI users Typer, so it supports helpful features like listing the available datasets to process.
+The script loads the selected dataset, processes it (saving interim data to the interim data directory), and saves the
+final processed data to the processed data directory (as configured in config.py).
+"""
 
 from enum import Enum
 

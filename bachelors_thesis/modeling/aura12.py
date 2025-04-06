@@ -1,9 +1,14 @@
+"""
+AURA12: A self-supervised learning framework for 12-lead ECG signals
+Contains the AURA12 model, as well as the model-specific dataset class.
+"""
 import random
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
 from torch.optim import Adam
+from torch.utils.data import Dataset
 
 
 class AURA12Dataset(Dataset):
