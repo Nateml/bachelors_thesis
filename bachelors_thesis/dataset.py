@@ -1,28 +1,62 @@
-from pathlib import Path
+
+from enum import Enum
 
 from loguru import logger
-from tqdm import tqdm
+import numpy as np
 import typer
 
-from bachelors_thesis.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
+from bachelors_thesis.config import INTERIM_DATA_DIR, RAW_DATA_DIR
+from bachelors_thesis.data import load_ptbdata, make_aura12_data
 
 app = typer.Typer()
 
 
+class Dataset(str, Enum):
+    ptbxl100all = "ptbxl100all"
+    ptbxl500all = "ptbxl500all"
+    ptbxl100norm = "ptbxl100norm"
+    ptbxl500norm = "ptbxl500norm"
+
+
 @app.command()
 def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
+    dataset: Dataset = typer.Option(
+        ...,
+        help="Which dataset to process",
+        prompt=True,
+        case_sensitive=False,
+        ),
 ):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
+    if dataset in ["ptbxl100all", "ptbxl500all", "ptbxl100norm", "ptbxl500norm"]:
+        sampling_rate = 100 if dataset.value.startswith("ptbxl100") else 500
+        logger.info(f"Loading {dataset.value} dataset... This will take a while.")
+
+        input_dir = str(RAW_DATA_DIR / "ptb-xl") + "/"
+
+        X, Y = load_ptbdata.load_data(
+            data_path=input_dir,
+            sampling_rate=sampling_rate,
+            limit=None,
+            only_precordial_leads=True,
+            only_normal=dataset in ["ptbxl100norm", "ptbxl500norm"],
+            )
+
+        logger.info("Dataset loaded successfully.")
+
+        # Save X to interim data as .npy
+
+        interim_dir = INTERIM_DATA_DIR / dataset.value
+
+        interim_dir.mkdir(parents=True, exist_ok=True)
+
+        np.save(interim_dir / "X.npy", X)
+        np.save(interim_dir / "Y.npy", Y)
+
+        logger.info(f"X and Y saved to {interim_dir}.")
+
+        # Process for aura12
+        logger.info("Processing dataset for aura12...")
+        make_aura12_data.main(X, Y)
 
 
 if __name__ == "__main__":
