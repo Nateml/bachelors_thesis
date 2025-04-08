@@ -62,7 +62,7 @@ def main(
 
         # Process for aura12
         logger.info("Processing dataset for aura12...")
-        make_aura12_data.main(X, Y)
+        make_aura12_data.main(X, Y, dataset.value)
 
 
 if __name__ == "__main__":
