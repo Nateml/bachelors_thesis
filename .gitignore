@@ -184,3 +184,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Hydra
+outputs/
+hydra/
+
+# Weights and Biases
+wandb/

@@ -1,0 +1,18 @@
+augment: true
+augment_chance: 0.5
+augment_types:
+  noise:
+    noise: true
+    noise_type: gaussian
+    noise_std_low: 0.001
+    noise_std_high: 0.015
+  random_crop:
+    random_crop: true
+    crop_size_low: 0.25
+    crop_size_high: 1.0
+augment_choice_strategy: random
+augment_choice_strategy_params:
+  num_augmentations: 2
+  num_augmentations_per_sample: 1
+  augment_types: [noise, random_crop]
+  augment_type_weights: [0.5, 0.5]

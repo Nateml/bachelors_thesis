@@ -1,0 +1,4 @@
+name: ptbxl500all
+path: data/processed/ptbxl500all/
+sampling_rate: 500
+description: "PTB-XL, 500Hz, All Heartbeats"

@@ -1,0 +1,22 @@
+defaults:
+  - model: aura12
+  - dataset: ptbxl100all
+  - optimizer: adam
+  - loss: dual_loss
+  - wandb: default
+  - augment: default
+  - _self_
+
+run:
+  exp_num: "00" # Experiment number
+  name: baseline # A short name for the experiment
+  experiment_name: ${run.exp_num}_${model.model_name}_${run.name}
+  comment: "baseline"
+  epochs: 20
+  batch_size: 32
+  learning_rate: 1e-4
+  checkpoint: true
+  checkpoint_path: checkpoints/${run.experiment_name}
+  device: cuda
+
+run_name: ${model.model_name}_${dataset.name}

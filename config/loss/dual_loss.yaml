@@ -1,0 +1,11 @@
+name: dual_loss
+description: "Loss function which is a combination of two independent loss function. Controlled by a parameter lambda. Total loss = (1 - lambda) * loss1 + lambda * loss2"
+contrastive_loss:
+  name: contrastive_loss
+  description: "Contrastive loss function. Used for making spatially similar samples have similar embeddings. Uses NT-Xent loss function."
+  temp: 0.01 # Temperature parameter for NT-Xent loss function. Higher values will make the loss less sensitive to the distance between samples.
+cross_entropy_loss:
+  name: cross_entropy_loss
+  description: "Cross entropy loss function. Used for training the classification head of AURA12."
+_lambda: 0.5 # Evenly weighted, increaasing lambda will increase the weight of loss2 and decrease the weight of loss1.
+  
