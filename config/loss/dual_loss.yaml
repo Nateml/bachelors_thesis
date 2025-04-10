@@ -7,5 +7,5 @@ contrastive_loss:
 cross_entropy_loss:
   name: cross_entropy_loss
   description: "Cross entropy loss function. Used for training the classification head of AURA12."
-_lambda: 0.5 # Evenly weighted, increaasing lambda will increase the weight of loss2 and decrease the weight of loss1.
+_lambda: 1
   

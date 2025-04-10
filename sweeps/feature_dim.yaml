@@ -1,0 +1,28 @@
+program: bachelors_thesis/modeling/train.py
+
+method: grid
+metric:
+  name: val/loss
+  goal: minimize
+
+parameters:
+  model.feature_dim:
+    values: [16, 32, 64, 128, 256]
+  wandb.tags:
+    values: [["sweep", "feature_dim_test"]]
+  optimizer.lr:
+    values: [3e-4]
+  run.epochs:
+    values: [10]
+  run.name:
+    values: ["feature_dim_test"]
+  run.batch_size:
+    values: [64]
+  loss._lambda:
+    values: [1]
+
+command:
+- ${env}
+- C:\Users\natem\bachelors_thesis\env\Scripts\python.exe
+- ${program}
+- ${args_no_hyphens}

@@ -186,8 +186,11 @@ cython_debug/
 .pypirc
 
 # Hydra
-outputs/
-hydra/
+/outputs/
+/hydra/
 
 # Weights and Biases
-wandb/
+/wandb/
+
+# Checkpoints
+/checkpoints/

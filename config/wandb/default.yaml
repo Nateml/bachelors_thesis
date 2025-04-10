@@ -1,0 +1,7 @@
+enabled: true
+project: bachelors-thesis
+entity: nateml-maastricht-university
+tags: ["hydra", "experiment"]
+group: null
+log_artifacts: true
+notes: ${run.comment}
