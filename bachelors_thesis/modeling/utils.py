@@ -1,7 +1,8 @@
+import pathlib
+
 from omegaconf import OmegaConf
 import torch
 import wandb
-import pathlib
 
 
 def log_to_wandb(train_metrics, val_metrics, epoch, cfg):

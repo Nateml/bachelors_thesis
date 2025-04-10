@@ -8,11 +8,11 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import wandb
 
+from bachelors_thesis.logger import create_progress_bar, log_epoch_summary, update_progress_bar
 from bachelors_thesis.modeling.dataset_registry import get_dataset
 from bachelors_thesis.modeling.datasets.aura12_dataset import AURA12Dataset
 from bachelors_thesis.modeling.model_registry import get_model
 from bachelors_thesis.modeling.utils import log_to_wandb, save_checkpoint
-from bachelors_thesis.logger import create_progress_bar, update_progress_bar, log_epoch_summary
 
 
 class AverageMeter:
