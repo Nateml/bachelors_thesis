@@ -1,6 +1,7 @@
 from omegaconf import OmegaConf
 import torch
 import wandb
+import pathlib
 
 
 def log_to_wandb(train_metrics, val_metrics, epoch, cfg):
@@ -16,6 +17,11 @@ def log_to_wandb(train_metrics, val_metrics, epoch, cfg):
 
 def save_checkpoint(model, cfg, epoch, metrics: dict, best: bool = False):
     checkpoint_path = f"{cfg.run.checkpoint_path}_latest.pth"
+    # Create the directory if it doesn't exist
+    path = pathlib.Path(cfg.run.checkpoint_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save the model
     torch.save(model.state_dict(), checkpoint_path)
     print(f"Model checkpoint saved to {checkpoint_path}\n")
 
@@ -33,6 +39,12 @@ def save_checkpoint(model, cfg, epoch, metrics: dict, best: bool = False):
     wandb.log_artifact(artifact, aliases=["latest"])
 
     if best:
+        checkpoint_path = f"{cfg.run.checkpoint_path}_best.pth"
+
+        # Save the model
+        torch.save(model.state_dict(), checkpoint_path)
+        print(f"Model checkpoint saved to {checkpoint_path}\n")
+
         # Create a new artifact for the best model
         artifact = wandb.Artifact(
             name=f"{cfg.run.experiment_name}_best",
@@ -43,6 +55,5 @@ def save_checkpoint(model, cfg, epoch, metrics: dict, best: bool = False):
                 "model_config": OmegaConf.to_container(cfg, resolve=True),
             }
         )
-        checkpoint_path = f"{cfg.run.checkpoint_path}_best.pth"
         artifact.add_file(checkpoint_path)
         wandb.log_artifact(artifact, aliases=["best"])

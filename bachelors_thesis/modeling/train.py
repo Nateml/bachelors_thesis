@@ -12,6 +12,7 @@ from bachelors_thesis.modeling.dataset_registry import get_dataset
 from bachelors_thesis.modeling.datasets.aura12_dataset import AURA12Dataset
 from bachelors_thesis.modeling.model_registry import get_model
 from bachelors_thesis.modeling.utils import log_to_wandb, save_checkpoint
+from bachelors_thesis.logger import create_progress_bar, update_progress_bar, log_epoch_summary
 
 
 class AverageMeter:
@@ -51,9 +52,10 @@ def train_loop(model: nn.Module,
     model.train() 
 
     metrics = AverageMeterDict()
+    progress_bar = create_progress_bar(dataloader)
 
     # Enumerate over the dataloader
-    for batch_idx, batch in enumerate(dataloader):
+    for batch in dataloader:
         # Each batch is a list of items
         # Each item:
         #   - anchor_signals: a list of all 6 precordial signals in the
@@ -79,15 +81,9 @@ def train_loop(model: nn.Module,
         loss.backward()
         optimizer.step()
 
+        # Update the metrics and progress bar
         metrics.update(step_metrics)
-
-        if batch_idx % 100 == 0:
-            print(
-                f"Batch {batch_idx}/{len(dataloader)}: "
-            )
-            # Print the step metrics
-            for k, v in step_metrics.items():
-                print(f"{k}: {v:.4f}")
+        update_progress_bar(progress_bar, loss)
 
     # Return metrics
     return metrics.average()
@@ -105,7 +101,7 @@ def eval_loop(model: nn.Module,
     metrics = AverageMeterDict()
 
     # Enumerate over the dataloader
-    for batch_idx, batch in enumerate(dataloader):
+    for batch in dataloader:
         # Each batch is a list of items
         # Each item:
         #   - anchor_signals: a list of all 6 precordial signals in the
@@ -185,6 +181,7 @@ def train(
         train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg)
         val_results = eval_loop(model, val_dataloader, loss_fn, cfg)
 
+        log_epoch_summary(epoch, train_results, val_results)
         log_to_wandb(train_results, val_results, epoch, cfg)
 
         print("--------------------------------------------------")
