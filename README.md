@@ -6,6 +6,12 @@
 
 Code for my Bachelor's Thesis at Maastricht University. Fulfilled in completion of the requirements for the BSc in Data Science & Artificial Intelligence. Thesis Title: "A Deep Learning Approach for Electrode Localization to Enable Truly Imageless ECGi".
 
+## Training
+To train a model, run the train.py script under the bachelors_thesis/modeling/ directory. Take a look at the config folder for the various configuration options. They can be overriden via the command line as well, e.g. 
+```
+> python bachelors_thesis/modeling/train.py model=aura12 run.epochs=10 batch.size=32 augment.augment=false 
+```
+
 ## Project Organization
 
 ```
