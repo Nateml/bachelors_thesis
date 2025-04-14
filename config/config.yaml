@@ -1,8 +1,8 @@
 defaults:
-  - model: aura12
+  - model: sigloc12
   - dataset: ptbxl100all
   - optimizer: adam
-  - loss: dual_loss
+  - loss: cross_entropy
   - wandb: default
   - augment: default
   - _self_

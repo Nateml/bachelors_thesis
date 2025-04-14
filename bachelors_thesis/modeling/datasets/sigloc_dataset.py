@@ -1,76 +1,37 @@
 import random
 
-from omegaconf import DictConfig
 import torch
-import torch.nn.functional as F
+from torch.nn import functional as F
 from torch.utils.data import Dataset
 
 
-class AURA12Dataset(Dataset):
-    def __init__(self, ecg_tensor, augment_cfg: DictConfig = None, **kwargs):
+class SigLocDataset(Dataset):
+    def __init__(self, ecg_tensor, augment_cfg=None, **kwargs):
         """
-        ecg_tensor: A tensor of shape (N, 6, T) where N is the number
-                  of samples, 6 is the number of precordial leads,
-                    and T is the length of the signal.
-        augment_cfg: Configuration object containing params for data augmentation.
-                    If None, no augmentation will be applied.
+        ecg_tensor: A tensor of shape (N, E, T) where N is the number
+                    of samples, E is the number of electrode signals,
+                    and T is the length of each signal.
         """
         super().__init__()
-        self.ecgs = ecg_tensor  # (N, 6, T)
-        self.N = ecg_tensor.size(0)  # Number of ECGs
-        self.T = ecg_tensor.size(2)  # Length of the signal (T)
+        self.ecgs = ecg_tensor
         self.augment_cfg = augment_cfg
         self.random = random.Random(42)
 
-        # Create the anchors
-        self.anchor_pairs = []
-        # Enumarate all leads for each ECG
-        for ecg_idx in range(self.N):
-            for lead_idx in range(6):
-                self.anchor_pairs.append((ecg_idx, lead_idx))
-
     def __len__(self):
-        return len(self.anchor_pairs)
-
+        # Number of samples 
+        return self.ecgs.size(0) 
+    
     def __getitem__(self, idx):
-        # Determine which ecg_idx, lead_idx to use as anchor
-        ecg_idx, anchor_idx = self.anchor_pairs[idx]
-        anchor_ecg = self.ecgs[ecg_idx]  # (6, T)
+        # Get an ECG sample by index
+        ecg = self.ecgs[idx]
 
-        # Sample positive ECG (from a different patient)
-        valid_indices = list(range(self.N))
-        valid_indices.remove(ecg_idx)  # Remove the anchor ECG index
-        positive_ecg_idx = random.choice(valid_indices)
-        positive_ecg = self.ecgs[positive_ecg_idx]  # (6, T)
+        # Apply augmentation if specified
+        if self.augment_cfg and self.augment_cfg.augment and self.random.random() < self.augment_cfg.augment_chance:
+            ecg = self._augment(ecg)
 
-        # Create the context mask
-        # Mask all electrodes except the anchor electrode
-        context_mask = torch.ones(6, dtype=torch.bool)
-        context_mask[anchor_idx] = False
+        return ecg
 
-        # Augment the ECG
-        if (self.augment_cfg and self.augment_cfg.augment and self.random.random() < self.augment_cfg.augment_chance):
-            anchor_ecg = self._augment(anchor_ecg)
-            positive_ecg = self._augment(positive_ecg)
-
-        return (
-            anchor_ecg,
-            anchor_idx,
-            positive_ecg,
-            anchor_idx,  # Same lead index as in the anchor ECG
-            context_mask
-        )
-
-    def _augment(self, signals):
-        """
-        Augment the signal by randomly performing
-        one of several augmentations:
-        - Additive noise
-        - Random cropping
-        - Heart rate perturbation
-        signals: Tensor of shape (6, T),
-        """
-
+    def _augment(self, ecg):
         augmentations = [
             self.additive_noise,
             self.random_crop
@@ -102,7 +63,7 @@ class AURA12Dataset(Dataset):
             self.augment_cfg.augment_types.noise.noise_std_low,
             self.augment_cfg.augment_types.noise.noise_std_high
             )
-        return augmentation(signals, noise_level=noise_level)
+        return augmentation(ecg, noise_level=noise_level)
 
     def additive_noise(self, signals, noise_level=0.01):
         """

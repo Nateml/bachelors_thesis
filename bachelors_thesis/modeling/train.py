@@ -9,7 +9,6 @@ import wandb
 
 from bachelors_thesis.logger import create_progress_bar, log_epoch_summary, update_progress_bar
 from bachelors_thesis.modeling.dataset_registry import get_dataset
-from bachelors_thesis.modeling.datasets.aura12_dataset import AURA12Dataset
 from bachelors_thesis.modeling.model_registry import get_model
 from bachelors_thesis.modeling.utils import log_to_wandb, save_checkpoint
 
@@ -43,12 +42,13 @@ def train_loop(model: nn.Module,
                optimizer: torch.optim.Optimizer,
                dataloader: DataLoader,
                loss_fn,
-               cfg: DictConfig,
-               device: str ='cuda'
+               cfg: DictConfig
                ):
 
     # Put the model in training mode
     model.train() 
+
+    device = cfg.run.device
 
     metrics = AverageMeterDict()
     progress_bar = create_progress_bar(dataloader)
@@ -153,8 +153,6 @@ def train(
     Returns:
         model: Trained AURA12 model
     """
-    assert cfg.model.model_name == "aura12", "Only AURA12 model is supported"
-    assert cfg.loss.name == "dual_loss", "Only dual loss is supported"
 
     # 1. Load model from registry
     model_type, loss_fn = get_model(cfg.model.model_name)
@@ -231,16 +229,15 @@ def main(cfg: DictConfig):
 
     # 3. Create the dataloaders
     torch_dataset = get_dataset(cfg)
-    if torch_dataset is AURA12Dataset:
-        # Reshape the data to (N, 6, T) from (N, T, 6)
-        train_data = train_data.permute(0, 2, 1)
-        val_data = val_data.permute(0, 2, 1)
-        # Create the dataset
-        train_dataset = torch_dataset(train_data, augment_cfg=cfg.augment)
-        # Leave out the augmentation for validation
-        val_dataset = torch_dataset(val_data, augment_cfg=None)
-    else:
-        raise ValueError(f"Unknown dataset for: {cfg.model.model_name}. Dataset is of type {torch_dataset}.")
+
+    # Reshape the data to (N, 6, T) from (N, T, 6)
+    train_data = train_data.permute(0, 2, 1)
+    val_data = val_data.permute(0, 2, 1)
+
+    # Create the dataset
+    train_dataset = torch_dataset(train_data, augment_cfg=cfg.augment)
+    # Leave out the augmentation for validation
+    val_dataset = torch_dataset(val_data, augment_cfg=None)
     
     # 4. Create the dataloaders
     train_dataloader = DataLoader(

@@ -1,8 +1,9 @@
 from typing import Callable, Tuple, Type
 
-import torch.nn as nn
-
-from bachelors_thesis.modeling.aura12 import AURA12, loss_step
+from bachelors_thesis.modeling.aura12 import AURA12
+from bachelors_thesis.modeling.aura12 import loss_step as aura12_loss_step
+from bachelors_thesis.modeling.sigloc import SigLoc12
+from bachelors_thesis.modeling.sigloc import loss_step as sigloc_loss_step
 
 
 def get_model(model_name: str) -> Tuple[Type, Callable]:
@@ -11,4 +12,7 @@ def get_model(model_name: str) -> Tuple[Type, Callable]:
     :param model_name: Name of the model to get.
     """
     if model_name == "aura12":
-        return AURA12, loss_step
+        return AURA12, aura12_loss_step
+    elif model_name == "sigloc12":
+        return SigLoc12, sigloc_loss_step
+
