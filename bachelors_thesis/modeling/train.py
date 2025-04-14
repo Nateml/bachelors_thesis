@@ -1,4 +1,3 @@
-
 import hydra
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
@@ -157,14 +156,6 @@ def train(
     assert cfg.model.model_name == "aura12", "Only AURA12 model is supported"
     assert cfg.loss.name == "dual_loss", "Only dual loss is supported"
 
-    wandb.init(
-        project=cfg.wandb.project,
-        name=cfg.run.experiment_name,
-        config=OmegaConf.to_container(cfg, resolve=True),
-        tags=cfg.wandb.tags,
-        group=cfg.wandb.group
-    )
-
     # 1. Load model from registry
     model_type, loss_fn = get_model(cfg.model.model_name)
     model = model_type(cfg.model).to(cfg.run.device)
@@ -182,7 +173,8 @@ def train(
         val_results = eval_loop(model, val_dataloader, loss_fn, cfg)
 
         log_epoch_summary(epoch, train_results, val_results)
-        log_to_wandb(train_results, val_results, epoch, cfg)
+        if cfg.wandb.enabled:
+            log_to_wandb(train_results, val_results, epoch, cfg)
 
         print("--------------------------------------------------")
         print("\n")
@@ -209,6 +201,29 @@ def main(cfg: DictConfig):
     data_path = cfg.dataset.path
     train_data = np.load(data_path + "/train.npy")
     val_data = np.load(data_path + "/val.npy")
+
+    # Initialize W&B
+    if cfg.wandb.enabled:
+        wandb.init(
+            project=cfg.wandb.project,
+            name=cfg.run.experiment_name,
+            config=OmegaConf.to_container(cfg, resolve=True),
+            tags=cfg.wandb.tags,
+            group=cfg.wandb.group
+        )
+
+        # Log dataset as a W&B artifact
+        dataset_artifact = wandb.Artifact(
+            name=f"{cfg.dataset.name}_dataset",
+            type="dataset",
+            metadata={
+                "description": cfg.dataset.description,
+                "path": cfg.dataset.path,
+                "sampling_rate": cfg.dataset.sampling_rate
+            }
+        )
+        dataset_artifact.add_dir(cfg.dataset.path)
+        wandb.log_artifact(dataset_artifact)
 
     # 2. Convert to torch tensors
     train_data = torch.from_numpy(train_data).float()
