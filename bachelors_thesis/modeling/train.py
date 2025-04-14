@@ -236,8 +236,9 @@ def main(cfg: DictConfig):
         train_data = train_data.permute(0, 2, 1)
         val_data = val_data.permute(0, 2, 1)
         # Create the dataset
-        train_dataset = torch_dataset(train_data, cfg.augment)
-        val_dataset = torch_dataset(val_data, cfg.augment)
+        train_dataset = torch_dataset(train_data, augment_cfg=cfg.augment)
+        # Leave out the augmentation for validation
+        val_dataset = torch_dataset(val_data, augment_cfg=None)
     else:
         raise ValueError(f"Unknown dataset for: {cfg.model.model_name}. Dataset is of type {torch_dataset}.")
     

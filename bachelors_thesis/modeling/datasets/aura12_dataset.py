@@ -7,12 +7,13 @@ from torch.utils.data import Dataset
 
 
 class AURA12Dataset(Dataset):
-    def __init__(self, ecg_tensor, augment_cfg: DictConfig):
+    def __init__(self, ecg_tensor, augment_cfg: DictConfig = None):
         """
         ecg_tensor: A tensor of shape (N, 6, T) where N is the number
                   of samples, 6 is the number of precordial leads,
                     and T is the length of the signal.
         augment_cfg: Configuration object containing params for data augmentation.
+                    If None, no augmentation will be applied.
         """
         super().__init__()
         self.ecgs = ecg_tensor  # (N, 6, T)
@@ -48,7 +49,7 @@ class AURA12Dataset(Dataset):
         context_mask[anchor_idx] = False
 
         # Augment the ECG
-        if (self.augment_cfg.augment and self.random.random() < self.augment_cfg.augment_chance):
+        if (self.augment_cfg and self.augment_cfg.augment and self.random.random() < self.augment_cfg.augment_chance):
             anchor_ecg = self._augment(anchor_ecg)
             positive_ecg = self._augment(positive_ecg)
 
