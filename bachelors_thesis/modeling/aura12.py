@@ -3,6 +3,7 @@ AURA12: A self-supervised learning framework for 12-lead ECG signals
 Contains the AURA12 model, as well as the model-specific dataset class.
 """
 
+import numpy as np
 from omegaconf import DictConfig
 import torch
 import torch.nn as nn
@@ -215,6 +216,72 @@ class AURA12(nn.Module):
         lead_logits = self.classifier(z)  # (B, 6)
 
         return z, lead_logits  # (B, 2*D), (B, 6)
+
+    def predict(self, input_, batch_size=64):
+        """
+        Runs prediction on the input signals (in evaluation mode).
+        x: Tensor of shape (S, N, T),
+            S is the number of samples,
+            N is the number of leads (6),
+            and T is the length of the signal.
+        
+        Returns:
+            lead_logits: Tensor of shape (S, 6, 6),
+                where 6 is the number of classes (leads).
+                So the output is a 6x6 matrix of logits for each lead,
+                for each sample.
+        """
+
+        # Set the model to evaluation mode
+        self.eval()
+
+        S, N, T = input_.shape
+        assert N == 6, f"Input must have 6 electrodes. Input shape: {input_.shape}"
+
+        # Create a dataset from the input
+        class InferenceDataset(torch.utils.data.Dataset):
+            def __init__(self, x):
+                self.x = x
+
+            def __len__(self):
+                return len(self.x)
+
+            def __getitem__(self, idx):
+                return self.x[idx]
+
+        dataloader = torch.utils.data.DataLoader(
+            InferenceDataset(input_),
+            batch_size=64,
+            shuffle=False
+        )
+
+        preds = np.zeros((S, N, N), dtype=np.float32)
+        tracker = 0
+
+        for x in dataloader:
+            B = x.shape[0]  # batch size
+
+            # Repeat x 6 times along batch dimension for each target index
+            # Shape: (B*6, 6, T)
+            x_expanded = x.repeat_interleave(N, dim=0)
+
+            # Create target indices 0...5 for each sample in the batch
+            # (B*6, 6)
+            target_indices = torch.arange(N, device=x.device).repeat(B)
+
+            # Create context masks
+            context_mask = torch.ones((B*N, N), dtype=torch.bool, device=x.device)
+            context_mask[torch.arange(B*N), target_indices] = False
+
+            with torch.no_grad():
+                # Forward pass through the model
+                _, lead_logits = self(x_expanded, target_indices, context_mask)
+
+            # Add the predictions to the output array
+            preds[tracker:tracker + B, :, :] = lead_logits.view(B, N, N).cpu().numpy()
+            tracker += B
+
+        return torch.from_numpy(preds).float()
 
 
 def nt_xent_loss(z_i, z_j, temperature=0.1):
