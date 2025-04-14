@@ -198,6 +198,8 @@ cython_debug/
 
 # Weights and Biases
 /wandb/
+notebooks/*/wandb/
+artifacts/
 
 # Checkpoints
 /checkpoints/
