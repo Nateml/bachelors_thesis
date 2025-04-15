@@ -12,7 +12,7 @@ from bachelors_thesis.registries.dataset_registry import get_dataset
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
 
-@hydra.main(config_path="../../config", config_name="config", version_base="1.3")
+@hydra.main(config_path="../config", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
     """
     Entry point for training a model.
@@ -60,6 +60,9 @@ def main(cfg: DictConfig):
     # 2. Convert to torch tensors
     train_data = torch.from_numpy(train_data).float()
     val_data = torch.from_numpy(val_data).float()
+
+    logger.info(f"Train data shape: {train_data.shape}")
+    logger.info(f"Validation data shape: {val_data.shape}")
 
     # 3. Create the dataloaders
     torch_dataset = get_dataset(cfg)

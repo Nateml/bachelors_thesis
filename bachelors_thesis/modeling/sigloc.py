@@ -315,9 +315,10 @@ def loss_step(
     losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(N)]
     loss = torch.stack(losses).mean()
 
-    # Compute per-class accuracy and average
-    accuracies = [(logits[i].argmax(dim=1) == targets[i]).float().mean() for i in range(6)]
-    acc = torch.stack(accuracies).mean()
+    # Compute accuracies
+    preds = logits.argmax(dim=2)  # (B, N)
+    correct = (preds == targets).float()
+    acc = correct.mean().item()
 
     return loss, {
         "loss": loss.item(),

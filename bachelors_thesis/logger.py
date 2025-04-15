@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
 
-console = Console()
+console = Console(record=True)
 
 def init_logger(log_level="INFO", log_file=None):
     logger.remove()
@@ -41,5 +41,8 @@ def log_epoch_summary(epoch, train_metrics, val_metrics):
     table.add_row(*row_from_metrics("Train", train_metrics))
     table.add_row(*row_from_metrics("Val", val_metrics))
 
-    table_str = console.export_text(table)
+    with console.capture() as capture:
+        console.print(table)
+    table_str = capture.get()
+
     logger.info("\n" + table_str)
