@@ -322,5 +322,5 @@ def loss_step(
 
     return loss, {
         "loss": loss.item(),
-        "accuracy": acc.item()
+        "accuracy": acc
     }
