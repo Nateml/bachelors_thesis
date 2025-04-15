@@ -1,0 +1,40 @@
+model_name: siglab
+feature_dim: 64
+signal_length: 1000
+num_leads: 6
+
+local_encoder:
+  in_channels: 1
+  layers:
+    - out_channels: 16
+      kernel_size: 12
+      stride: 1
+      padding: 3
+    - out_channels: 32
+      kernel_size: 7
+      stride: 1
+      padding: 2
+    - out_channels: 64
+      kernel_size: 5
+      stride: 1
+      padding: 1
+    - out_channels: 128
+      kernel_size: 3
+      stride: 1
+      padding: 1
+
+context_encoder:
+  hidden_dim: 64
+  phi:
+    num_layers: 3
+    hidden_size: 64
+  rho:
+    num_layers: 1
+  pooling: sum  # Sum pooling
+
+classifier:
+  layers:
+    - out_size: 128
+    - in_size: 128
+      out_size: 64
+    - in_size: 64

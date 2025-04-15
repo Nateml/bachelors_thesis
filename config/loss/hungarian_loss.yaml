@@ -1,0 +1,2 @@
+name: hungarian-loss
+description: "Hungarian loss function for set matching. Used by the SigLab model."

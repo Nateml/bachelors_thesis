@@ -1,8 +1,8 @@
+
+from loguru import logger
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
-from loguru import logger
-import sys
 
 console = Console()
 
