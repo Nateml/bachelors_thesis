@@ -203,3 +203,6 @@ artifacts/
 
 # Checkpoints
 /checkpoints/
+
+# Loguru
+/logs

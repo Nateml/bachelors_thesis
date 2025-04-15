@@ -31,7 +31,7 @@ def main(
         help="Which dataset to process",
         prompt=True,
         case_sensitive=False,
-        ),
+        )
 ):
     if dataset in ["ptbxl100all", "ptbxl500all", "ptbxl100norm", "ptbxl500norm"]:
         sampling_rate = 100 if dataset.value.startswith("ptbxl100") else 500

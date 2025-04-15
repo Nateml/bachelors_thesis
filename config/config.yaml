@@ -5,6 +5,7 @@ defaults:
   - loss: cross_entropy
   - wandb: default
   - augment: default
+  - preprocessor_group: highpass_only
   - _self_
 
 run:
@@ -17,5 +18,7 @@ run:
   checkpoint: true
   checkpoint_path: checkpoints/${run.experiment_name}
   device: cuda
+  log_level: info
+  log_file: logs/${run.experiment_name}.log
 
 run_name: ${model.model_name}_${dataset.name}

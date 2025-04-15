@@ -1,4 +1,5 @@
 import hydra
+from loguru import logger
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import torch
@@ -7,36 +8,17 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import wandb
 
-from bachelors_thesis.logger import create_progress_bar, log_epoch_summary, update_progress_bar
-from bachelors_thesis.modeling.dataset_registry import get_dataset
-from bachelors_thesis.modeling.model_registry import get_model
-from bachelors_thesis.modeling.utils import log_to_wandb, save_checkpoint
+from bachelors_thesis.logger import (
+    create_progress_bar,
+    init_logger,
+    log_epoch_summary,
+    update_progress_bar,
+)
+from bachelors_thesis.modeling.utils import AverageMeterDict, log_to_wandb, save_checkpoint
+from bachelors_thesis.registries.dataset_registry import get_dataset
+from bachelors_thesis.registries.model_registry import get_model
+from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
-
-class AverageMeter:
-    def __init__(self):
-        self.sum = 0
-        self.count = 0
-    
-    def update(self, val, n=1):
-        self.sum += val * n
-        self.count += n
-    
-    def average(self):
-        return self.sum / self.count if self.count != 0 else 0
-
-class AverageMeterDict: 
-    def __init__(self):
-        self.meters = {}
-    
-    def update(self, values: dict, n=1):
-        for k, v in values.items():
-            if k not in self.meters:
-                self.meters[k] = AverageMeter()
-            self.meters[k].update(v, n)
-
-    def average(self):
-        return {k: meter.average() for k, meter in self.meters.items()}
 
 def train_loop(model: nn.Module,
                optimizer: torch.optim.Optimizer,
@@ -165,7 +147,7 @@ def train(
     best_val_loss = float('inf')
 
     for epoch in range(cfg.run.epochs):
-        print(f"Epoch {epoch+1}/{cfg.run.epochs}-------------------------------------")
+        logger.info(f"Epoch {epoch+1}/{cfg.run.epochs}--------------------------------------")
 
         train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg)
         val_results = eval_loop(model, val_dataloader, loss_fn, cfg)
@@ -174,8 +156,7 @@ def train(
         if cfg.wandb.enabled:
             log_to_wandb(train_results, val_results, epoch, cfg)
 
-        print("--------------------------------------------------")
-        print("\n")
+        logger.info("-----------------------------------\n")
 
         # Save the model checkpoint
         if cfg.run.checkpoint:
@@ -195,6 +176,10 @@ def train(
 
 @hydra.main(config_path="../../config", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
+    # Initialize the logger
+    init_logger(log_level=cfg.run.log_level.upper(), log_file=cfg.run.log_file)
+    logger.info(f"Running experiment: {cfg.run.experiment_name}")
+
     # 1. Load the data
     data_path = cfg.dataset.path
     train_data = np.load(data_path + "/train.npy")
@@ -222,6 +207,13 @@ def main(cfg: DictConfig):
         )
         dataset_artifact.add_dir(cfg.dataset.path)
         wandb.log_artifact(dataset_artifact)
+
+    # Preprocess the data
+    for preprocessor in cfg.preprocessor_group.preprocessors:
+        logger.info(f"Applying preprocessor: {preprocessor._preprocessor_.strip('_')}...")
+        preprocessor_func = get_preprocessor(preprocessor._preprocessor_)
+        train_data = preprocessor_func(train_data, sampling_rate=cfg.dataset.sampling_rate, **preprocessor)
+        val_data = preprocessor_func(val_data, sampling_rate=cfg.dataset.sampling_rate, **preprocessor)
 
     # 2. Convert to torch tensors
     train_data = torch.from_numpy(train_data).float()

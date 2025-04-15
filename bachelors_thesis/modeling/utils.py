@@ -5,6 +5,31 @@ import torch
 import wandb
 
 
+class AverageMeter:
+    def __init__(self):
+        self.sum = 0
+        self.count = 0
+    
+    def update(self, val, n=1):
+        self.sum += val * n
+        self.count += n
+    
+    def average(self):
+        return self.sum / self.count if self.count != 0 else 0
+
+class AverageMeterDict: 
+    def __init__(self):
+        self.meters = {}
+    
+    def update(self, values: dict, n=1):
+        for k, v in values.items():
+            if k not in self.meters:
+                self.meters[k] = AverageMeter()
+            self.meters[k].update(v, n)
+
+    def average(self):
+        return {k: meter.average() for k, meter in self.meters.items()}
+
 def log_to_wandb(train_metrics, val_metrics, epoch, cfg):
     # Prepend "train" or "val" to the metrics
     train_results = {f"train/{k}": v for k, v in train_metrics.items()}

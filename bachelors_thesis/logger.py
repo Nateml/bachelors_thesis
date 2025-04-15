@@ -1,8 +1,23 @@
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
+from loguru import logger
+import sys
 
 console = Console()
+
+def init_logger(log_level="INFO", log_file=None):
+    logger.remove()
+    logger.add(
+        lambda msg: tqdm.write(msg, end=""),
+        level=log_level,
+        colorize=True
+    )
+
+    if log_file:
+        logger.add(log_file, level=log_level, rotation="10 MB", retention="10 days")
+
+    return logger
 
 def create_progress_bar(dataloader, desc='Training'):
     return tqdm(enumerate(dataloader), total=len(dataloader), desc=desc, leave=False)
@@ -26,6 +41,5 @@ def log_epoch_summary(epoch, train_metrics, val_metrics):
     table.add_row(*row_from_metrics("Train", train_metrics))
     table.add_row(*row_from_metrics("Val", val_metrics))
 
-    console.print("\n")
-    console.print(table)
-    console.print("\n")
+    table_str = console.export_text(table)
+    logger.info("\n" + table_str)

@@ -1,0 +1,3 @@
+defaults:
+  - /preprocessors: [highpass]
+  - _self_

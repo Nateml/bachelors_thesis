@@ -1,0 +1,3 @@
+- _preprocessor_: highpass
+  cutoff: 0.5
+  order: 4
