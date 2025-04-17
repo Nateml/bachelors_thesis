@@ -67,6 +67,9 @@ def main(cfg: DictConfig):
     # 3. Create the dataloaders
     torch_dataset = get_dataset(cfg)
 
+    logger.info(f"Using dataset: {torch_dataset.__name__}")
+    logger.info(f"Augmentation is set to {cfg.augment.augment}")
+
     # Reshape the data to (N, 6, T) from (N, T, 6)
     train_data = train_data.permute(0, 2, 1)
     val_data = val_data.permute(0, 2, 1)

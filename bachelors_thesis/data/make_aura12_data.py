@@ -37,6 +37,5 @@ def main(
     np.save(OUTPUT_DIR / "meta_val.npy", meta_val)
     np.save(OUTPUT_DIR / "meta_test.npy", meta_test)
 
-    logger.success(f"Data for AURA12 processed and saved to {
-        OUTPUT_DIR / dataset
-    }.")
+    logger.success(f"Data for AURA12 processed and saved to"
+                   f"{OUTPUT_DIR / dataset}.")
