@@ -1,0 +1,2 @@
+model: siglab
+run.batch_size=32

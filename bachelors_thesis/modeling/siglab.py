@@ -190,7 +190,7 @@ class SigLab(nn.Module):
         _, _, D = all_features.shape
 
         # Encode the context signals
-        context = self.context_encoder()  # (B, D)
+        context = self.context_encoder(all_features)  # (B, D)
         context = context.unsqueeze(1).expand(-1, N, -1)  # (B, N, D)
 
         z = torch.cat([all_features, context], dim=-1)  # (B, N, 2*D)
@@ -199,6 +199,36 @@ class SigLab(nn.Module):
         lead_logits = self.classifier(z)  # (B, N, N)
 
         return lead_logits  # (B, N, N)
+
+    def predict_leads(self, input_signals: torch.Tensor) -> np.ndarray:
+        """
+        Predict lead assignments using Hungarian matching.
+        
+        Args:
+            model: Trained model (should be in eval mode)
+            input_signals: Tensor of shape (B, 6, T)
+
+        Returns:
+            np.ndarray of shape (B, 6), each row is the predicted permutation of lead labels
+        """
+        self.eval()
+        input_signals = input_signals.to(next(self.parameters()).device)
+
+        with torch.no_grad():
+            logits = self(input_signals)  # logits: (B, 6, 6)
+
+        logits = logits.detach().cpu().numpy()
+        B, N, _ = logits.shape
+        predictions = np.zeros((B, N), dtype=np.int64)
+
+        for b in range(B):
+            cost = -logits[b]  # Maximize logits = minimize negative logits
+            row_ind, col_ind = linear_sum_assignment(cost)
+            assignment = np.zeros(N, dtype=int)
+            assignment[row_ind] = col_ind
+            predictions[b] = assignment
+
+        return predictions  # shape: (B, 6)
 
     def predict(self, logits: torch.Tensor) -> np.ndarray:
         """
@@ -209,12 +239,16 @@ class SigLab(nn.Module):
         """
 
         B, N, _ = logits.shape
-        predictions = np.zeros((B, N), dtype=np.int6)
+        predictions = np.zeros((B, N), dtype=np.int64)
 
         for b in range(B):
             cost = -logits[b].detach().cpu().numpy()
             row_ind, col_ind = linear_sum_assignment(cost)
-            predictions[b, row_ind] = col_ind
+
+            # build the assignment array
+            pred = np.zeros(N, dtype=int)
+            pred[row_ind] = col_ind
+            predictions[b] = pred
 
         return predictions
 
@@ -244,6 +278,8 @@ def permutation_loss(logits, targets):
         matched_targets = targets[b, col_ind]  # (N,)
 
         # Step 3: Compute the loss
+        print(matched_logits)
+        print(matched_targets)
         total_loss += F.cross_entropy(matched_logits, matched_targets)
 
         # Step 4: Compute the accuracy
@@ -278,6 +314,6 @@ def loss_step(
     loss, acc = permutation_loss(logits, targets)
 
     return loss, {
-        "loss": loss,
+        "loss": loss.item(),
         "accuracy": acc
     }
