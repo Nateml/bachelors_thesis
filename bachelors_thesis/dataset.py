@@ -12,7 +12,10 @@ import numpy as np
 import typer
 
 from bachelors_thesis.config import INTERIM_DATA_DIR, RAW_DATA_DIR
-from bachelors_thesis.data import load_ptbdata, make_aura12_data
+from bachelors_thesis.data import load_ptbdata_new as load_ptbdata
+
+# from bachelors_thesis.data import load_ptbdata
+from bachelors_thesis.data import split_ptbxl
 
 app = typer.Typer()
 
@@ -39,7 +42,7 @@ def main(
 
         input_dir = str(RAW_DATA_DIR / "ptb-xl") + "/"
 
-        X, Y = load_ptbdata.load_data(
+        X, meta = load_ptbdata.load_data(
             data_path=input_dir,
             sampling_rate=sampling_rate,
             limit=None,
@@ -56,13 +59,13 @@ def main(
         interim_dir.mkdir(parents=True, exist_ok=True)
 
         np.save(interim_dir / "X.npy", X)
-        np.save(interim_dir / "Y.npy", Y)
+        meta.to_csv(interim_dir / "meta.csv", index=True)
 
         logger.info(f"X and Y saved to {interim_dir}.")
 
         # Process for aura12
         logger.info("Processing dataset for aura12...")
-        make_aura12_data.main(X, Y, dataset.value)
+        split_ptbxl.main(X, meta, dataset.value)
 
 
 if __name__ == "__main__":
