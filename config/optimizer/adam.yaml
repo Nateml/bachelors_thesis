@@ -1,3 +1,8 @@
 name: adam
-lr: 2e-4
-weight_decay: 0
+lr: 2e-3
+weight_decay: 0.0001
+scheduler:
+  enabled: true
+  name: reduce_lr_on_plateau
+  factor: 0.5
+  patience: 3

@@ -2,7 +2,7 @@ from loguru import logger
 from omegaconf import DictConfig
 import torch
 import torch.nn as nn
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader
 import wandb
 
@@ -76,32 +76,33 @@ def eval_loop(model: nn.Module,
 
     metrics = AverageMeterDict()
 
-    # Enumerate over the dataloader
-    for batch in dataloader:
-        # Each batch is a list of items
-        # Each item:
-        #   - anchor_signals: a list of all 6 precordial signals in the
-        #                     12-lead ECG (each of shape (T,))
-        #   - anchor_idx: the index of the signal in anchor_signals to be
-        #                 used as the anchor
-        #   - positive_signals: a list of precordial signals from
-        #                       different patients
-        #   - positive_idx: the index of the signal in positive_signals
-        #                   which corresponds to the same lead as the
-        #                   anchor signal 
-        #   - anchor_label: the label of the anchor signal (0-5, one for
-        #                   each precordial lead)
-        #   - context_mask: a boolean tensor of shape (6,) indicating which
-        #                   electrodes to include in the context encoding
+    with torch.no_grad():
+        # Enumerate over the dataloader
+        for batch in dataloader:
+            # Each batch is a list of items
+            # Each item:
+            #   - anchor_signals: a list of all 6 precordial signals in the
+            #                     12-lead ECG (each of shape (T,))
+            #   - anchor_idx: the index of the signal in anchor_signals to be
+            #                 used as the anchor
+            #   - positive_signals: a list of precordial signals from
+            #                       different patients
+            #   - positive_idx: the index of the signal in positive_signals
+            #                   which corresponds to the same lead as the
+            #                   anchor signal 
+            #   - anchor_label: the label of the anchor signal (0-5, one for
+            #                   each precordial lead)
+            #   - context_mask: a boolean tensor of shape (6,) indicating which
+            #                   electrodes to include in the context encoding
 
-        # Move tensors to device
-        batch = [v.to(device) for v in batch]
+            # Move tensors to device
+            batch = [v.to(device) for v in batch]
 
-        # Compute loss
-        _, step_metrics = loss_fn(model, batch, cfg)
+            # Compute loss
+            _, step_metrics = loss_fn(model, batch, cfg)
 
-        # Update metrics
-        metrics.update(step_metrics)
+            # Update metrics
+            metrics.update(step_metrics)
 
     # Return metrics
     return metrics.average()
@@ -137,7 +138,19 @@ def train(
 
     # 2. Set up the optimizer
     assert cfg.optimizer.name == "adam", "Only Adam optimizer is supported"
-    optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+    # optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+    optimizer = AdamW(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+
+    # Set up scheduler if specified
+    if cfg.optimizer.scheduler.enabled:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=optimizer,
+            mode='min',
+            factor=cfg.optimizer.scheduler.factor,
+            patience=cfg.optimizer.scheduler.patience
+        )
+    else:
+        scheduler = None
 
     best_val_loss = float('inf')
 
@@ -146,6 +159,11 @@ def train(
 
         train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg)
         val_results = eval_loop(model, val_dataloader, loss_fn, cfg)
+
+        # Update the learning rate scheduler if specified
+        if scheduler:
+            scheduler.step(val_results['loss'])
+            logger.info(f"Learning rate: {optimizer.param_groups[0]['lr']}")
 
         log_epoch_summary(epoch, train_results, val_results)
         if cfg.wandb.enabled:
@@ -162,6 +180,9 @@ def train(
             save_checkpoint(
                 model, cfg, epoch, val_results, best=best
             ) 
+
+        # Free up memory
+        torch.cuda.empty_cache()
 
 
     wandb.finish()
