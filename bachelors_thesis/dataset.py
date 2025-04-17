@@ -64,7 +64,7 @@ def main(
         logger.info(f"X and Y saved to {interim_dir}.")
 
         # Process for aura12
-        logger.info("Processing dataset for aura12...")
+        logger.info("Processing dataset...")
         split_ptbxl.main(X, meta, dataset.value)
 
 

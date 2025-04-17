@@ -195,6 +195,7 @@ cython_debug/
 # Hydra
 /outputs/
 /hydra/
+/multirun/
 
 # Weights and Biases
 /wandb/

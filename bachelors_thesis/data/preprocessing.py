@@ -7,6 +7,8 @@ def bandpass(data, *, sampling_rate, order=4, low=0.4, high=40, **kwargs):
     """
     Apply a butterworth bandpass filter to signals.
 
+    data: np.ndarray
+
     Accepts data of shape:
         - (T,) for a 1D signal
         - (N, T) for multiple signals
@@ -41,6 +43,8 @@ def bandpass(data, *, sampling_rate, order=4, low=0.4, high=40, **kwargs):
 def highpass(data, *, sampling_rate, order=4, low=0.5, **kwargs):
     """
     Apply a butterworth highpass filter to signals.
+
+    data: np.ndarray
 
     Accepts data of shape:
         - (T,) for a 1D signal
