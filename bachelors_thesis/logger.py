@@ -1,5 +1,6 @@
 
 from loguru import logger
+from omegaconf import OmegaConf
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
@@ -15,7 +16,9 @@ def init_logger(log_level="INFO", log_file=None):
     )
 
     if log_file:
-        logger.add(log_file, level=log_level, rotation="10 MB", retention="10 days")
+        if not isinstance(log_file, str):
+            log_file = OmegaConf.to_container(log_file, resolve=True)
+        logger.add(str(log_file), level=log_level, rotation="10 MB", retention="10 days")
 
     return logger
 
