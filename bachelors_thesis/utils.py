@@ -3,19 +3,28 @@ from typing import List, Optional
 from matplotlib import pyplot as plt
 import numpy as np
 
+PRECORDIAL_LEAD_NAMES = [
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+]
 
 def _plot_traces(
         signal: np.ndarray,
         lead_names: List[str],
         sampling_rate: int, 
         title: str,
+        predictions: Optional[np.ndarray] = None,
         ax: Optional[plt.Axes] = None
 ) -> plt.Axes:
     n_samples, n_ch = signal.shape
 
     if ax is None:
         fig_h = max(3, n_ch * 1.5)
-        fig, ax = plt.subplots(figsize=(12, fig_h))
+        _, ax = plt.subplots(figsize=(12, fig_h))
 
     # Vertical spacing to avoid overlap
     spacing = max(np.ptp(signal[:, i]) for i in range(n_ch)) * 1.2
@@ -31,11 +40,32 @@ def _plot_traces(
     ax.set_yticklabels(lead_names)
     ax.set_xlim(0, n_samples)
     ax.grid(True, alpha=0.3)
+    ax.set_ylabel("Leads")
+
+    if predictions is not None:
+        assert len(predictions) == n_ch, "Predictions length must match number of leads."
+
+        # Extend the visible x-range to make room for the text
+        extra = int(n_samples * 0.15)
+        ax.set_xlim(0, n_samples + extra)
+        x_text = n_samples + extra * 0.05
+
+        for i, base in enumerate(baselines):
+            pred = str(predictions[i])
+            true = lead_names[i]
+            txt = f"Predicted: {pred}"
+            color = "green" if true == pred else "red"
+
+            ax.text(x_text, base, txt, color=color, fontsize=9, ha="left", va="center",
+                    bbox=dict(facecolor="white", edgecolor="none", alpha=0.7))
+
+    return ax
 
 def plot_ecg(
         signals: np.ndarray,
         sampling_rate: int =100,
         leads: List[str] = ["V1", "V2", "V3", "V4", "V5", "V6"],
+        predictions: Optional[np.ndarray] = None,
         ax: Optional[plt.Axes] = None
 ) -> plt.Axes:
     """
@@ -51,6 +81,8 @@ def plot_ecg(
         Sampling frequency in Hz (used for the title / x-axis scale).
     leads: list of str, default ["V1", ..., "V6"]
         Names corresponding to each row of *signals*.
+    predictions : Sequence[str|int], optional
+        Per-lead model predictions (same ordering as *leads*).
     ax: matplotlib.axes.Axes, optional
         If provided, the traces are drawn onto this axis.
 
@@ -80,5 +112,36 @@ def plot_ecg(
         leads,
         sampling_rate,
         f"ECG signals array | sr={sampling_rate} Hz",
-        ax
+        predictions=predictions,
+        ax=ax
     )
+
+def confusion_matrix(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
+    """
+    Computes the confusion matrix for the given predictions and targets.
+
+    Args
+    ----
+    predictions: np.ndarray, shape (N,)
+        Predicted labels.
+    targets: np.ndarray, shape (N,)
+        True labels.
+
+    Returns
+    -------
+    np.ndarray, shape (C, C)
+        Confusion matrix of shape (C, C), where C is the number of classes.
+        Access the value at (i, j) to get the number of samples with true label i
+        that were predicted as j.
+    """
+    
+    assert predictions.shape == targets.shape, "Predictions and targets must have the same shape."
+    assert predictions.ndim == 2, "Predictions and targets must be 2D arrays."
+
+    n_classes = np.max(targets) + 1
+    cm = np.zeros((n_classes, n_classes), dtype=int)
+
+    for p, t in zip(predictions, targets):
+        cm[t, p] += 1
+
+    return cm
