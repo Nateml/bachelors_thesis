@@ -19,7 +19,9 @@ def train_loop(model: nn.Module,
                optimizer: torch.optim.Optimizer,
                dataloader: DataLoader,
                loss_fn,
-               cfg: DictConfig
+               cfg: DictConfig,
+               scaler: torch.cuda.amp.GradScaler = None,
+               autocast: torch.cuda.amp.autocast = torch.enable_grad
                ):
 
     # Put the model in training mode
@@ -50,12 +52,19 @@ def train_loop(model: nn.Module,
         batch = [v.to(device) for v in batch]
 
         # Compute loss
-        loss, step_metrics = loss_fn(model, batch, cfg)
+        with autocast():
+            loss, step_metrics = loss_fn(model, batch, cfg)
 
         # Backward + Optimizer step
         optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+
+        if scaler:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
 
         # Update the metrics and progress bar
         metrics.update(step_metrics)
@@ -68,7 +77,9 @@ def eval_loop(model: nn.Module,
               dataloader: DataLoader,
               loss_fn,
               cfg: DictConfig,
-              device: str ='cuda'
+              device: str ='cuda',
+              scaler: torch.cuda.amp.GradScaler = None,
+              autocast: torch.cuda.amp.autocast = torch.enable_grad
               ):
 
     # Put the model in evaluation mode
@@ -99,7 +110,8 @@ def eval_loop(model: nn.Module,
             batch = [v.to(device) for v in batch]
 
             # Compute loss
-            _, step_metrics = loss_fn(model, batch, cfg)
+            with autocast():
+                _, step_metrics = loss_fn(model, batch, cfg)
 
             # Update metrics
             metrics.update(step_metrics)
@@ -110,7 +122,9 @@ def eval_loop(model: nn.Module,
 def train(
     cfg: DictConfig,
     train_dataloader: DataLoader,
-    val_dataloader: DataLoader
+    val_dataloader: DataLoader,
+    scaler: torch.cuda.amp.GradScaler = None,
+    autocast: torch.cuda.amp.autocast = torch.enable_grad
 ):
     """
     Trains the AURA12 model on the provided dataloader.
@@ -157,8 +171,8 @@ def train(
     for epoch in range(cfg.run.epochs):
         logger.info(f"Epoch {epoch+1}/{cfg.run.epochs}--------------------------------------")
 
-        train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg)
-        val_results = eval_loop(model, val_dataloader, loss_fn, cfg)
+        train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
+        val_results = eval_loop(model, val_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
 
         # Update the learning rate scheduler if specified
         if scheduler:

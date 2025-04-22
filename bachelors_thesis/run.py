@@ -3,6 +3,8 @@ from loguru import logger
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import torch
+from torch.amp.autocast_mode import autocast
+from torch.amp.grad_scaler import GradScaler
 from torch.utils.data import DataLoader
 import wandb
 
@@ -11,6 +13,21 @@ from bachelors_thesis.modeling.train import train
 from bachelors_thesis.registries.dataset_registry import get_dataset
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
+
+def _make_amp_objs(device: str, amp_dtype: str):
+    use_amp = bool(amp_dtype)
+    if not use_amp:
+        return None, torch.enable_grad
+    
+    # GradScaler for mixed precision training
+    need_scaler = (device == "cuda" and amp_dtype == "float16")
+    scaler = GradScaler(device, enabled=need_scaler)
+
+    # Autocast context manager
+    def autocast_ctx():
+        return autocast(device, dtype=getattr(torch, amp_dtype))
+
+    return scaler, autocast_ctx
 
 @hydra.main(config_path="../config", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
@@ -21,6 +38,10 @@ def main(cfg: DictConfig):
     # Initialize the logger
     init_logger(log_level=cfg.run.log_level.upper(), log_file=cfg.run.log_file)
     logger.info(f"Running experiment: {cfg.run.experiment_name}")
+
+    # AMP settings
+    scaler, autocast_ctx = _make_amp_objs(cfg.run.device, OmegaConf.select(cfg, "run.amp_dtype"))
+    logger.info(f"Using AMP: {scaler is not None}")
 
     # 1. Load the data
     data_path = cfg.dataset.path
@@ -97,7 +118,9 @@ def main(cfg: DictConfig):
     train(
         cfg=cfg,
         train_dataloader=train_dataloader,
-        val_dataloader=val_dataloader
+        val_dataloader=val_dataloader,
+        scaler=scaler,
+        autocast=autocast_ctx
     )
 
 if __name__ == "__main__":
