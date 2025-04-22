@@ -16,9 +16,12 @@ run:
   epochs: 20
   batch_size: 32
   checkpoint: true
+  min_delta: 0.005
+  patience: 5
   checkpoint_path: checkpoints/${run.experiment_name}
   device: cuda
   log_level: info
   log_file: logs/${run.experiment_name}.log
+  amp_dtype: float16 # Data type for AMP (Automatic Mixed Precision)
 
 run_name: ${model.model_name}_${dataset.name}

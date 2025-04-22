@@ -146,60 +146,73 @@ def train(
         model: Trained AURA12 model
     """
 
-    # 1. Load model from registry
-    model_type, loss_fn = get_model(cfg.model.model_name)
-    model = model_type(cfg.model).to(cfg.run.device)
+    try:
+        # 1. Load model from registry
+        model_type, loss_fn = get_model(cfg.model.model_name)
+        model = model_type(cfg.model).to(cfg.run.device)
 
-    # 2. Set up the optimizer
-    assert cfg.optimizer.name == "adam", "Only Adam optimizer is supported"
-    # optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
-    optimizer = AdamW(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+        # 2. Set up the optimizer
+        assert cfg.optimizer.name == "adam", "Only Adam optimizer is supported"
+        # optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+        optimizer = AdamW(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
 
-    # Set up scheduler if specified
-    if cfg.optimizer.scheduler.enabled:
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            mode='min',
-            factor=cfg.optimizer.scheduler.factor,
-            patience=cfg.optimizer.scheduler.patience
-        )
-    else:
-        scheduler = None
+        # Set up scheduler if specified
+        if cfg.optimizer.scheduler.enabled:
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer=optimizer,
+                mode='min',
+                factor=cfg.optimizer.scheduler.factor,
+                patience=cfg.optimizer.scheduler.patience
+            )
+        else:
+            scheduler = None
 
-    best_val_loss = float('inf')
+        best_val_loss = float('inf')
+        epochs_no_improvement = 0
+        patience = cfg.run.patience
+        min_delta = cfg.run.min_delta
 
-    for epoch in range(cfg.run.epochs):
-        logger.info(f"Epoch {epoch+1}/{cfg.run.epochs}--------------------------------------")
+        for epoch in range(cfg.run.epochs):
+            logger.info(f"Epoch {epoch+1}/{cfg.run.epochs}--------------------------------------")
 
-        train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
-        val_results = eval_loop(model, val_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
+            train_results = train_loop(model, optimizer, train_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
+            val_results = eval_loop(model, val_dataloader, loss_fn, cfg, scaler=scaler, autocast=autocast)
 
-        # Update the learning rate scheduler if specified
-        if scheduler:
-            scheduler.step(val_results['loss'])
-            logger.info(f"Learning rate: {optimizer.param_groups[0]['lr']}")
+            # Update the learning rate scheduler if specified
+            if scheduler:
+                scheduler.step(val_results['loss'])
+                logger.info(f"Learning rate: {optimizer.param_groups[0]['lr']}")
 
-        log_epoch_summary(epoch, train_results, val_results)
-        if cfg.wandb.enabled:
-            log_to_wandb(train_results, val_results, epoch, cfg)
+            log_epoch_summary(epoch, train_results, val_results)
+            if cfg.wandb.enabled:
+                log_to_wandb(train_results, val_results, epoch, cfg)
 
-        logger.info("-----------------------------------\n")
+            logger.info("-----------------------------------\n")
 
-        # Save the model checkpoint
-        if cfg.run.checkpoint:
-            best = val_results['loss'] < best_val_loss
-            if best:
+            # Check for early stopping
+            if val_results['loss'] + min_delta < best_val_loss:
+                epochs_no_improvement = 0
                 best_val_loss = val_results['loss']
 
-            save_checkpoint(
-                model, cfg, epoch, val_results, best=best
-            ) 
+                # Save the model checkpoint
+                if cfg.run.checkpoint:
+                    save_checkpoint(
+                        model, cfg, epoch, val_results, best=True
+                    ) 
+            else:
+                epochs_no_improvement += 1
 
-        # Free up memory
-        torch.cuda.empty_cache()
+            if epochs_no_improvement >= patience:
+                logger.info(f"Early stopping after epoch {epoch+1}/{cfg.run.epochs}")
+                break
 
+            # Free up memory
+            torch.cuda.empty_cache()
 
-    wandb.finish()
-
-    print("Done! Hip hip hooray!")
-    return model
+        print("Done! Hip hip hooray!")
+        return model
+    finally:
+        if cfg.wandb.enabled:
+            if epoch:
+                wandb.run.summary["stopped_epoch"] = epoch + 1
+            wandb.finish()
