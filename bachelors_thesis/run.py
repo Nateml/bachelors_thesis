@@ -13,6 +13,12 @@ from bachelors_thesis.modeling.train import train
 from bachelors_thesis.registries.dataset_registry import get_dataset
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
+# Enable cuDNN autotuner for performance optimization
+# This is useful for convolutional networks
+# It will test a few convolution algorithms and pick the fastest one
+# Small overhead at sartup, but should improve performance
+torch.backends.cudnn.benchmark = True
+
 
 def _make_amp_objs(device: str, amp_dtype: str):
     use_amp = bool(amp_dtype)
