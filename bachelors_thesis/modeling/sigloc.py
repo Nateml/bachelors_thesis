@@ -18,8 +18,6 @@ class LocalEncoder(nn.Module):
     def __init__(self, cfg: DictConfig):
         super().__init__()
 
-        assert cfg.local_encoder.in_channels == 1, "Only 1 input channel is supported"
-
         # Construct layers from the configuration
         layers = []
         in_channels = cfg.local_encoder.in_channels
@@ -64,6 +62,179 @@ class LocalEncoder(nn.Module):
 
         return out
 
+class InceptionBlock(nn.Module):
+    """
+    Performs multiple convolutions in parallel with different kernel sizes.
+    Each branch has its own kernel size and output channels.
+    The outputs of all branches are concatenated along the channel dimension.
+    """
+    def __init__(self, in_channels, bottleneck_channels, cfg: DictConfig):
+        super().__init__()
+
+        # Create the branches
+
+        # Branch 1: 1x1 convolution
+        self.branch1 = nn.Sequential(
+            # kernel size 1
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=cfg.inception_block.branch1.out_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0
+            ),
+            # Instance norm
+            nn.BatchNorm1d(cfg.inception_block.branch1.out_channels),
+            nn.ReLU()
+        )
+
+        # Branch 2: 5x1 convolution
+        self.branch2 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=bottleneck_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0
+            ),
+            nn.BatchNorm1d(bottleneck_channels),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels=bottleneck_channels,
+                out_channels=cfg.inception_block.branch2.out_channels,
+                kernel_size=5,
+                stride=1,
+                padding=2
+            ),
+            nn.BatchNorm1d(cfg.inception_block.branch2.out_channels),
+            nn.ReLU()
+        )
+
+        # Branch 3: 11x1 convolution
+        self.branch3 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=bottleneck_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0
+            ),
+            nn.BatchNorm1d(bottleneck_channels),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels=bottleneck_channels,
+                out_channels=cfg.inception_block.branch3.out_channels,
+                kernel_size=5,
+                stride=1,
+                padding=2
+            ),
+            nn.BatchNorm1d(cfg.inception_block.branch3.out_channels),
+            nn.ReLU(),
+        )
+
+        # Branch 4: 41x1 convolution
+        self.branch4 = nn.Sequential(
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=bottleneck_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0
+            ),
+            nn.BatchNorm1d(bottleneck_channels),
+            nn.ReLU(),
+            nn.Conv1d(
+                in_channels=bottleneck_channels,
+                out_channels=cfg.inception_block.branch4.out_channels,
+                kernel_size=41,
+                stride=1,
+                padding=20
+            ),
+            nn.BatchNorm1d(cfg.inception_block.branch4.out_channels),
+            nn.ReLU(),
+        )
+
+        # Branch 5: Max pooling
+        self.branch5 = nn.Sequential(
+            nn.MaxPool1d(kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=cfg.inception_block.branch5.out_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0
+            ),
+            nn.BatchNorm1d(cfg.inception_block.branch5.out_channels),
+            nn.ReLU()
+        )
+
+    def forward(self, x):
+        # Parallel branches
+        b1 = self.branch1(x)
+        b2 = self.branch2(x)
+        b3 = self.branch3(x)
+        b4 = self.branch4(x)
+        b5 = self.branch5(x)
+
+        # Concatenate along the channel dimension
+        out = torch.cat([b1, b2, b3, b4, b5], dim=1)
+
+        return out
+
+class InceptionEncoder(nn.Module):
+
+    def __init__(self, cfg: DictConfig):
+        super().__init__()
+
+        layers = []
+        current_channels = 1
+        for i in range(cfg.inception_encoder.num_blocks):
+            layers.append(InceptionBlock(
+                in_channels=current_channels,
+                bottleneck_channels=cfg.inception_encoder.bottleneck_channels,
+                cfg=cfg
+                ))
+            
+            current_channels = (
+                cfg.inception_block.branch1.out_channels +
+                cfg.inception_block.branch2.out_channels +
+                cfg.inception_block.branch3.out_channels +
+                cfg.inception_block.branch4.out_channels +
+                cfg.inception_block.branch5.out_channels
+            )
+
+            # Small dropout layer
+            layers.append(nn.Dropout(cfg.inception_encoder.dropout))
+
+        # Pooling Layer
+        layers.append(nn.AdaptiveAvgPool1d(1))  # pooling layer
+        # Flatten
+        layers.append(nn.Flatten())
+        # Fully Connected Layyer
+        layers.append(nn.Linear(current_channels, cfg.feature_dim))
+        layers.append(nn.ReLU())
+
+        self.encoder = nn.Sequential(*layers)
+
+    def forward(self, x):
+        # x is of shape (B, num_electrodes, T):
+        # B: batch size, num_electrodes: 6, T: length of the signal
+        # Reshape to (B * num_electrodes, 1, T) for Conv1d
+        # Each electrode signal is processed independently
+        # and in parallel
+
+        assert x.dim() == 3, "Input must be of shape (B, N, T)"
+
+        B, N, T = x.shape
+        # Flatten to (B * N, T) and add a channel dimension
+        x = x.view(B * N, 1, T)
+
+        out = self.encoder(x)
+
+        # Reshape back to (B, N, feature_dim)
+        out = out.view(B, N, -1)
+
+        return out
 
 class DeepSetsContextEncoder(nn.Module):
     """Encoder for context information using DeepSets architecture"""
@@ -144,8 +315,10 @@ class Classifier(nn.Module):
     def __init__(self, cfg: DictConfig):
         super().__init__()
 
+        self.input_size = cfg.feature_dim * (2 if cfg.context_encoder.enabled else 1)
+
         self.classifier = nn.Sequential(
-            nn.Linear(cfg.feature_dim * 2, cfg.classifier.layers[0].out_size),
+            nn.Linear(self.input_size, cfg.classifier.layers[0].out_size),
             nn.ReLU(),
             *[
                 layer
@@ -170,6 +343,7 @@ class SigLoc12(nn.Module):
     def __init__(self, cfg: DictConfig):
         super().__init__()
         self.feature_dim = cfg.feature_dim
+        self.cfg = cfg
 
         self.local_encoder = LocalEncoder(cfg)
 
@@ -195,26 +369,30 @@ class SigLoc12(nn.Module):
         all_features = self.local_encoder(signals)  # (B, N, D)
         _, _, D = all_features.shape
 
-        # Repeat x N times along batch dimension for each target index
-        # Shape: (B*N, N, T)
-        features_expanded = all_features.repeat_interleave(N, dim=0)
+        if self.cfg.context_encoder.enabled:
+            # Repeat x N times along batch dimension for each target index
+            # Shape: (B*N, N, T)
+            features_expanded = all_features.repeat_interleave(N, dim=0)
 
-        # Create target indices 0...5 for each sample in the batch
-        # (B*N, N)
-        target_indices = torch.arange(N, device=signals.device).repeat(B)
+            # Create target indices 0...5 for each sample in the batch
+            # (B*N, N)
+            target_indices = torch.arange(N, device=signals.device).repeat(B)
 
-        # Create context masks
-        # (B*N, N)
-        context_mask = torch.ones((B*N, N), dtype=torch.bool, device=signals.device)
-        context_mask[torch.arange(B*N), target_indices] = False
+            # Create context masks
+            # (B*N, N)
+            context_mask = torch.ones((B*N, N), dtype=torch.bool, device=signals.device)
+            context_mask[torch.arange(B*N), target_indices] = False
 
-        # Encode the context signals
-        context = self.context_encoder(features_expanded, context_mask)  # (B, D)
+            # Encode the context signals
+            context = self.context_encoder(features_expanded, context_mask)  # (B, D)
 
-        # Combine the two encodings
-        target_indices_expanded = target_indices.view(-1, 1, 1).expand(-1, 1, D)
-        target_features = torch.gather(features_expanded, dim=1, index=target_indices_expanded).squeeze(1)  # (B*N, D)
-        z = torch.cat([target_features, context], dim=-1)  # (B, 2*D)
+            # Combine the two encodings
+            target_indices_expanded = target_indices.view(-1, 1, 1).expand(-1, 1, D)
+            target_features = torch.gather(features_expanded, dim=1, index=target_indices_expanded).squeeze(1)  # (B*N, D)
+            z = torch.cat([target_features, context], dim=-1)  # (B, 2*D)
+        else:
+            # Convert all_features to (B*N, D) for the classifier
+            z = all_features.view(B*N, D)  # (B*N, D)
 
         # Classify the target signal using the combined encoding
         lead_logits = self.classifier(z)  # (B, N)
@@ -289,6 +467,138 @@ class SigLoc12(nn.Module):
             tracker += B
 
         return torch.from_numpy(preds).float()
+
+class SigLocNolan(nn.Module):
+    """
+    SigLoc12 with InceptionEncoder as the local encoder.
+    """
+
+    def __init__(self, cfg: DictConfig):
+        super().__init__()
+        self.feature_dim = cfg.feature_dim
+        self.cfg = cfg
+
+        self.local_encoder = InceptionEncoder(cfg)
+        self.context_encoder = DeepSetsContextEncoder(cfg)
+        self.classifier = Classifier(cfg)
+
+    def forward(self, signals):
+        """
+        signals: Tensor of shape (B, N, T),
+            where B is the batch size,
+            N is the number of leads (6),
+            and T is the length of the signal.
+        Returns:
+            embedding: tensor of shape (B, 2*D)
+            lead_logits: tensor of shape (B, N, N)
+            where D is the feature dimension of the encoders
+        """
+
+        B, N, T = signals.shape
+
+        # Process all electrode signals through the per-electrode local encoder
+        all_features = self.local_encoder(signals)  # (B, N, D)
+        _, _, D = all_features.shape
+
+        if self.cfg.context_encoder.enabled:
+            # Repeat x N times along batch dimension for each target index
+            # Shape: (B*N, N, T)
+            features_expanded = all_features.repeat_interleave(N, dim=0)
+
+            # Create target indices 0...5 for each sample in the batch
+            # (B*N, N)
+            target_indices = torch.arange(N, device=signals.device).repeat(B)
+
+            # Create context masks
+            # (B*N, N)
+            context_mask = torch.ones((B*N, N), dtype=torch.bool, device=signals.device)
+            context_mask[torch.arange(B*N), target_indices] = False
+
+            # Encode the context signals
+            context = self.context_encoder(features_expanded, context_mask)  # (B, D)
+
+            # Combine the two encodings
+            target_indices_expanded = target_indices.view(-1, 1, 1).expand(-1, 1, D)
+            target_features = torch.gather(features_expanded, dim=1, index=target_indices_expanded).squeeze(1)  # (B*N, D)
+            z = torch.cat([target_features, context], dim=-1)  # (B, 2*D)
+        else:
+            # Convert all_features to (B*N, D) for the classifier
+            z = all_features.view(B*N, D)
+
+        # Classify the target signal using the combined encoding
+        lead_logits = self.classifier(z)  # (B, N)
+
+        # Reshape back to (B, N, N)
+        lead_logits = lead_logits.view(B, N, N)  # (B, N, N)
+
+        return z, lead_logits  # (B, 2*D), (B, N, N)
+
+    def predict(self, input_, batch_size=64):
+        """
+        Runs prediction on the input signals (in evaluation mode).
+        x: Tensor of shape (S, N, T),
+            S is the number of samples,
+            N is the number of leads (6),
+            and T is the length of the signal.
+        
+        Returns:
+            lead_logits: Tensor of shape (S, 6, 6),
+                where 6 is the number of classes (leads).
+                So the output is a 6x6 matrix of logits for each lead,
+                for each sample.
+        """
+
+        # Set the model to evaluation mode
+        self.eval()
+
+        S, N, T = input_.shape
+        assert N == 6, f"Input must have 6 electrodes. Input shape: {input_.shape}"
+
+        # Create a dataset from the input
+        class InferenceDataset(torch.utils.data.Dataset):
+            def __init__(self, x):
+                self.x = x
+
+            def __len__(self):
+                return len(self.x)
+
+            def __getitem__(self, idx):
+                return self.x[idx]
+
+        dataloader = torch.utils.data.DataLoader(
+            InferenceDataset(input_),
+            batch_size=64,
+            shuffle=False
+        )
+
+        preds = np.zeros((S, N, N), dtype=np.float32)
+        tracker = 0
+
+        for x in dataloader:
+            B = x.shape[0]  # batch size
+
+            # Repeat x 6 times along batch dimension for each target index
+            # Shape: (B*6, 6, T)
+            x_expanded = x.repeat_interleave(N, dim=0)
+
+            # Create target indices 0...5 for each sample in the batch
+            # (B*6, 6)
+            target_indices = torch.arange(N, device=x.device).repeat(B)
+
+            # Create context masks
+            context_mask = torch.ones((B*N, N), dtype=torch.bool, device=x.device)
+            context_mask[torch.arange(B*N), target_indices] = False
+
+            with torch.no_grad():
+                # Forward pass through the model
+                _, lead_logits = self(x_expanded, target_indices, context_mask)
+
+            # Add the predictions to the output array
+            preds[tracker:tracker + B, :, :] = lead_logits.view(B, N, N).cpu().numpy()
+            tracker += B
+
+        return torch.from_numpy(preds).float()
+
 
 
 def loss_step(

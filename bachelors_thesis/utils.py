@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from matplotlib import pyplot as plt
 import numpy as np
+from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
 PRECORDIAL_LEAD_NAMES = [
     "V1",
@@ -145,3 +146,31 @@ def confusion_matrix(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray
         cm[t, p] += 1
 
     return cm
+
+def apply_preprocessors(data: np.ndarray, sampling_rate: int, preprocessors: list):
+    """
+    Applies a list of preprocessing functions to the data.
+
+    Args
+    ----
+    data: np.ndarray, shape (N, T, C)
+        Input data to be preprocessed. N is the number of samples, 
+        T is the number of time points, and C is the number of channels.
+    sampling_rate: int
+        Sampling frequency of the data in Hz.
+    preprocessors: list of dict
+        List of preprocessor configuration objects. Each object should have a field
+        *_preprocessor_* that contains the name of the preprocessor function to be fetched
+        using the preprocessor_registry. The rest of the fields are passed as keyword
+        arguments to the preprocessor function.
+
+    Returns
+    -------
+    np.ndarray, shape (N, T, C)
+        Copy of *data* with the preprocessor functions applied.
+    """
+    data_filtered = data.copy()
+    for prep_param in preprocessors:
+        prep = get_preprocessor(prep_param._preprocessor_)
+        data_filtered = prep(data_filtered, sampling_rate=sampling_rate, **prep_param)
+    return data_filtered

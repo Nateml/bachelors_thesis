@@ -23,6 +23,7 @@ local_encoder:
       padding: 1
 
 context_encoder:
+  enabled: true
   hidden_dim: 64
   phi:
     num_layers: 3
