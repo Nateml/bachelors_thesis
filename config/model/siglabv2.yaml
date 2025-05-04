@@ -1,0 +1,40 @@
+model_name: siglabv2
+feature_dim: 64
+signal_length: 1000
+num_classes: 6
+num_belief_updates: 3
+
+sab:
+  num_heads: 4
+  ffn_expansion: 4
+
+classifier:
+  in_size: ${model.feature_dim}
+  layers:
+    - out_size: 128
+    - in_size: 128
+      out_size: 64
+    - in_size: 64
+
+encoder:
+  num_inception_blocks: 3
+  cnn_dropout: 0.2
+
+gru:
+  num_layers: 3
+  bidirectional: false
+  dropout: 0
+
+inception_block:
+  bottleneck_channels: 32
+  branch1:
+    out_channels: 16
+  branch2:
+    out_channels: 32
+  branch3:
+    out_channels: 32
+  branch4:
+    out_channels: 32
+  branch5:
+    out_channels: 32
+

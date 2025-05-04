@@ -1,6 +1,9 @@
+import torch
+import torch.nn as nn
 from typing import List, Optional
 
 from matplotlib import pyplot as plt
+from scipy.ndimage import gaussian_filter1d
 import numpy as np
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
@@ -174,3 +177,118 @@ def apply_preprocessors(data: np.ndarray, sampling_rate: int, preprocessors: lis
         prep = get_preprocessor(prep_param._preprocessor_)
         data_filtered = prep(data_filtered, sampling_rate=sampling_rate, **prep_param)
     return data_filtered
+
+def plot_saliency(
+        model: nn.Module,
+        signals: torch.Tensor,
+        lead_idx: List[int] = [0, 1, 2, 3, 4, 5],
+        leads: List[str] = PRECORDIAL_LEAD_NAMES,
+        title: str = "Saliency Map",
+        time_window: tuple = None,
+        smoothing_sigma: int = 3
+):
+    """
+    Plots the saliency map for the given signals and model.
+
+    Args
+    ----
+    model: nn.Module
+        The model used for prediction. It should be a PyTorch model.
+    signals: torch.Tensor, shape (C, T)
+        The input signals to be analyzed. Only works with a single ECG sample. T is the number of time points,
+        and C is the number of channels (leads).
+    lead_idx: list of int, default [0, 1, 2, 3, 4, 5]
+        The indices of the leads to plot. These index the channels in *signals*. The order of this list shoulld
+        correspond with the names in *leads*.
+    leads: list of str, default PRECORDIAL_LEAD_NAMES
+        The names of the leads corresponding to the lead indices in *lead_idx*.
+    title: str, default "Saliency Map"
+        The title of the plot.
+    time_window: tuple of int, default None
+        The time window to be plotted. If None, the entire signal is plotted.
+        Should be a tuple of (start, end) indices.
+    smoothing_sigma: int, default 3
+        The standard deviation for the Gaussian smoothing applied to the saliency map.
+    """
+    x = signals.unsqueeze(0)  # Add batch dimension
+    x.requires_grad = True  # Enable gradient computation
+
+    y = model(x)
+    if isinstance(y, tuple): # The tuple normally returns the embeddings firsts
+        y = y[1]
+
+    if y.dim() == 3: # Check if there is a batch dimension
+        y = y[0]
+
+    if not time_window:
+        time_window = (0, signals.shape[-1])
+
+    assert time_window[0] >= 0 and time_window[1] <= signals.shape[-1], "Time window out of bounds"
+    assert time_window[0] < time_window[1], "Invalid time window"
+
+    assert len(leads) == len(lead_idx), "The number of lead indices should match the number of lead names"
+
+    num_leads = len(leads)
+    fig, axes = plt.subplots(num_leads, 1, figsize=(12, 2.5 * num_leads), sharex=True,
+                            gridspec_kw={'hspace': 0.15})
+    
+    for i, lead in enumerate(lead_idx):
+        lead_output = y[lead]
+        target_idx = lead_output.argmax()
+        target = lead_output[target_idx]
+        
+        model.zero_grad()
+        x.grad = None
+        target.backward(retain_graph=True)
+
+        saliency = x.grad.data.abs()[0, lead].cpu().numpy()
+        saliency = saliency / saliency.max()
+        saliency = saliency[time_window[0]:time_window[1]]
+        saliency_smooth = gaussian_filter1d(saliency, sigma=smoothing_sigma)
+        saliency_2d = saliency_smooth[np.newaxis, :]
+
+        ecg = x[0, lead].cpu().detach().numpy()
+        ecg = ecg[time_window[0]:time_window[1]]
+        ecg_scaled = (ecg - ecg.min()) / (ecg.max() - ecg.min())
+
+        ax = axes[i] if num_leads > 1 else axes
+        im = ax.imshow(saliency_2d,
+                    cmap='inferno',
+                    aspect='auto',
+                    extent=[0, len(ecg), 0, 1],
+                    norm=plt.Normalize(vmin=0.01, vmax=saliency.max()))
+
+        ax.plot(np.arange(len(ecg)), ecg_scaled, color='cyan', linewidth=1.5, linestyle='-', alpha=0.8)
+
+        # Minimal labeling
+        ax.set_yticks([])
+        ax.set_ylabel(f"Lead {leads[i]}", color='white', rotation=0, labelpad=30, fontsize=10, va='center')
+        ax.set_facecolor('black')
+        ax.tick_params(colors='white')
+        ax.axhline(y=0, color='white', linewidth=2, alpha=0.8)
+
+        # Clean borders
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        # Hide x-ticks on all but last subplot
+        if i < num_leads - 1:
+            ax.set_xticks([])
+        else:
+            ax.set_xlabel('Time', color='white')
+
+    # Add a single colorbar to the side
+    cbar = fig.colorbar(im, ax=axes, orientation='vertical', fraction=0.02, pad=0.01)
+    cbar.set_label('Saliency', color='white')
+    cbar.ax.yaxis.set_tick_params(color='white')
+    plt.setp(cbar.ax.get_yticklabels(), color='white')
+
+    # Title for the whole figure
+    fig.suptitle(title, color='white', fontsize=18)
+    fig.patch.set_facecolor('black')
+
+    #plt.tight_layout(rect=[0, 0, 0.97, 0.90])
+    plt.subplots_adjust(left=0.1, right=0.85, top=0.95, bottom=0.1)
+    plt.show()
+
+    return fig, axes

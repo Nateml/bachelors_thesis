@@ -8,16 +8,15 @@ The metadata is saved as .csv files for the training, validation, and test sets 
 information such as patient identifiers and biometric data, signal metadata, and ecg statements.
 """
 from loguru import logger
+from pathlib import Path
 import numpy as np
 import pandas as pd
-
-from bachelors_thesis.config import PROCESSED_DATA_DIR
 
 
 def main(
         X: np.ndarray,
         meta: pd.DataFrame,
-        dataset: str,
+        output_dir: Path,
 ):
     data_train = X[np.where(meta.strat_fold < 9)]
     data_val = X[np.where(meta.strat_fold == 9)]
@@ -32,15 +31,14 @@ def main(
     assert len(data_test) == len(meta_test), "Test data and metadata lengths do not match."
 
     # Save numpy arrays to .npy
-    OUTPUT_DIR = PROCESSED_DATA_DIR / dataset
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    np.save(OUTPUT_DIR / "train.npy", data_train)
-    np.save(OUTPUT_DIR / "val.npy", data_val)
-    np.save(OUTPUT_DIR / "test.npy", data_test)
-    meta_train.to_csv(OUTPUT_DIR / "meta_train.csv", index=True)
-    meta_val.to_csv(OUTPUT_DIR / "meta_val.csv", index=True)
-    meta_test.to_csv(OUTPUT_DIR / "meta_test.csv", index=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    np.save(output_dir / "train.npy", data_train)
+    np.save(output_dir / "val.npy", data_val)
+    np.save(output_dir / "test.npy", data_test)
+    meta_train.to_csv(output_dir / "meta_train.csv", index=True)
+    meta_val.to_csv(output_dir / "meta_val.csv", index=True)
+    meta_test.to_csv(output_dir / "meta_test.csv", index=True)
 
 
     logger.success(f"PTB-XL data processed and saved to"
-                   f"{OUTPUT_DIR / dataset}.")
+                   f"{output_dir}.")

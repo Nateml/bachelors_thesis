@@ -11,7 +11,7 @@ from loguru import logger
 import numpy as np
 import typer
 
-from bachelors_thesis.config import INTERIM_DATA_DIR, RAW_DATA_DIR
+from bachelors_thesis.config import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
 from bachelors_thesis.data import load_ptbdata_new as load_ptbdata
 
 # from bachelors_thesis.data import load_ptbdata
@@ -34,7 +34,13 @@ def main(
         help="Which dataset to process",
         prompt=True,
         case_sensitive=False,
-        )
+        ),
+    only_precordial_leads: bool = typer.Option(
+        True,
+        help="Whether to only use precordial leads",
+        prompt=True,
+        case_sensitive=False
+        ),
 ):
     if dataset in ["ptbxl100all", "ptbxl500all", "ptbxl100norm", "ptbxl500norm"]:
         sampling_rate = 100 if dataset.value.startswith("ptbxl100") else 500
@@ -46,7 +52,7 @@ def main(
             data_path=input_dir,
             sampling_rate=sampling_rate,
             limit=None,
-            only_precordial_leads=True,
+            only_precordial_leads=only_precordial_leads,
             only_normal=dataset in ["ptbxl100norm", "ptbxl500norm"],
             )
 
@@ -55,6 +61,10 @@ def main(
         # Save X to interim data as .npy
 
         interim_dir = INTERIM_DATA_DIR / dataset.value
+        if only_precordial_leads:
+            interim_dir = interim_dir / "precordial"
+        else:
+            interim_dir = interim_dir / "all"
 
         interim_dir.mkdir(parents=True, exist_ok=True)
 
@@ -65,7 +75,9 @@ def main(
 
         # Process for aura12
         logger.info("Processing dataset...")
-        split_ptbxl.main(X, meta, dataset.value)
+        output_dir = PROCESSED_DATA_DIR / dataset.value
+        output_dir = output_dir / "precordial" if only_precordial_leads else output_dir / "all"
+        split_ptbxl.main(X, meta, output_dir=output_dir)
 
 
 if __name__ == "__main__":

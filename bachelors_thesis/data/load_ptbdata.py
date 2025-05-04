@@ -27,21 +27,24 @@ def load_data(
                         if lead in precordial_leads]
         return lead_indices
 
+    def lead_indices_in_order(header, desired_order):
+        name2idx = {name: i for i, name in enumerate(header.sig_name)}
+        return [name2idx[lead] for lead in desired_order if lead in name2idx]
+
+    def load_raw_signals(file_list, path, desired_leads):
+        signals = []
+        for rec in file_list:
+            header = wfdb.rdheader(path + rec)
+            idx = lead_indices_in_order(header, desired_leads)
+            sig, _ = wfdb.rdsamp(path + rec, channels=idx)
+            signals.append(sig)
+
+        return np.stack(signals)  # Shape: (N, T, L)
+
     # Function to load ECG signal data
-    def load_raw_data(df, sampling_rate, path):
-        if sampling_rate == 100:
-            # Low resolution
-            data = [wfdb.rdsamp(path+f,
-                                channels=get_precordial_lead_indices(path+f)
-                                if only_precordial_leads else None)
-                    for f in df.filename_lr]
-        else:
-            # High resolution
-            data = [wfdb.rdsamp(path+f,
-                                channels=get_precordial_lead_indices(path+f)
-                                if only_precordial_leads else None)
-                    for f in df.filename_hr]
-        data = np.array([signal for signal, _ in data])
+    def load_raw_data(df, sampling_rate, path, lead_set):
+        file_list = df.filename_lr.values if sampling_rate == 100 else df.filename_hr.values
+        data = load_raw_signals(file_list, path, lead_set)
         return data
 
     # Load and convert annotation data
@@ -72,8 +75,17 @@ def load_data(
     if only_normal:
         Y = Y[Y.diagnostic_superclass.apply(lambda x: "NORM" in x)]
 
+    # Get the desired leads
+    # This is the order in which the channels will be stored in the .npy file
+    # This order is important for the model to work properly
+    if only_precordial_leads:
+        lead_set = ["V1", "V2", "V3", "V4", "V5", "V6"]
+    else:
+        lead_set = ["I", "II", "III", "aVR", "aVL", "aVF"] + \
+                   ["V1", "V2", "V3", "V4", "V5", "V6"]
+
     # Load raw signal data
     print("Loading raw signal data...")
-    X = load_raw_data(Y, sampling_rate, data_path)
+    X = load_raw_data(Y, sampling_rate, data_path, lead_set=lead_set)
 
     return X, Y

@@ -15,6 +15,7 @@ inception_block:
     out_channels: 32
 
 inception_encoder:
+  skip_connection: true  # Enable skip connection
   bottleneck_channels: 32
   num_blocks: 3
   dropout: 0.2

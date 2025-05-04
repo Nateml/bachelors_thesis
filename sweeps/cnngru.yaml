@@ -1,0 +1,34 @@
+program: bachelors_thesis/run.py
+command:
+  - ${env}
+  - C:/Users/natem/bachelors_thesis/env/Scripts/python.exe
+  - ${program}
+  - ${args_no_hyphens}
+  - model=cnngru
+  - run.name=sweep
+  - run.epochs=60
+method: bayes
+metric:
+  goal: minimize
+  name: val/loss
+parameters:
+  model.gru.num_layers:
+    max: 4
+    min: 1
+    distribution: int_uniform
+  model.feature_dim:
+    values:
+      - 32
+      - 64
+      - 128
+    distribution: categorical
+  model.gru.bidirectional:
+    values:
+      - "true"
+      - "false"
+    distribution: categorical
+  model.gru.dropout:
+    max: 0.5
+    min: 0
+    distribution: uniform
+  

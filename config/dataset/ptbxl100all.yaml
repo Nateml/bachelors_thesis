@@ -1,4 +1,4 @@
 name: ptbxl100all
 description: "PTB-XL, 100Hz, All Heartbeats"
-path: data/processed/ptbxl100all/
+path: data/processed/ptbxl100all/precordial/
 sampling_rate: 100

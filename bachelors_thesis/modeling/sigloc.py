@@ -4,237 +4,17 @@ SigLoc12: A Deep Learning Model for ECG Signal Localization
 """
 
 import numpy as np
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from bachelors_thesis.modeling.encoders import (
+    InceptionEncoder,
+    InceptionEncoderWithRes,
+    SimpleCNN1D,
+)
 
-class LocalEncoder(nn.Module):
-    """
-    Shared 1D CNN encoder for each electrode signal.
-    """
-
-    def __init__(self, cfg: DictConfig):
-        super().__init__()
-
-        # Construct layers from the configuration
-        layers = []
-        in_channels = cfg.local_encoder.in_channels
-        for layer_cfg in cfg.local_encoder.layers:
-            layers.append(nn.Conv1d(
-                    in_channels=in_channels,
-                    out_channels=layer_cfg.out_channels,
-                    kernel_size=layer_cfg.kernel_size,
-                    stride=layer_cfg.stride,
-                    padding=layer_cfg.padding
-                ))
-            layers.append(nn.ReLU())
-            in_channels = layer_cfg.out_channels
-
-        # Pooling Layer
-        layers.append(nn.AdaptiveAvgPool1d(1))  # pooling layer
-        # Flatten
-        layers.append(nn.Flatten())
-        # Fully Connected Layyer
-        layers.append(nn.Linear(in_channels, cfg.feature_dim))
-        layers.append(nn.ReLU())
-
-        self.encoder = nn.Sequential(*layers)
-
-    def forward(self, x):
-        # x is of shape (B, num_electrodes, T):
-        # B: batch size, num_electrodes: 6, T: length of the signal
-        # Reshape to (B * num_electrodes, 1, T) for Conv1d
-        # Each electrode signal is processed independently
-        # and in parallel
-
-        assert x.dim() == 3, "Input must be of shape (B, N, T)"
-        assert x.size(1) == 6, f"Input must have 6 electrodes. Input shape: {x.shape}"
-
-        B, N, T = x.shape
-        # Flatten to (B * N, T) and add a channel dimension
-        x = x.view(B * N, 1, T)
-
-        out = self.encoder(x)  # (B * N, feature_dim)
-        # Reshape back to (B, N, feature_dim)
-        out = out.view(B, N, -1)
-
-        return out
-
-class InceptionBlock(nn.Module):
-    """
-    Performs multiple convolutions in parallel with different kernel sizes.
-    Each branch has its own kernel size and output channels.
-    The outputs of all branches are concatenated along the channel dimension.
-    """
-    def __init__(self, in_channels, bottleneck_channels, cfg: DictConfig):
-        super().__init__()
-
-        # Create the branches
-
-        # Branch 1: 1x1 convolution
-        self.branch1 = nn.Sequential(
-            # kernel size 1
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=cfg.inception_block.branch1.out_channels,
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            # Instance norm
-            nn.BatchNorm1d(cfg.inception_block.branch1.out_channels),
-            nn.ReLU()
-        )
-
-        # Branch 2: 5x1 convolution
-        self.branch2 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=bottleneck_channels,
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            nn.BatchNorm1d(bottleneck_channels),
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels=bottleneck_channels,
-                out_channels=cfg.inception_block.branch2.out_channels,
-                kernel_size=5,
-                stride=1,
-                padding=2
-            ),
-            nn.BatchNorm1d(cfg.inception_block.branch2.out_channels),
-            nn.ReLU()
-        )
-
-        # Branch 3: 11x1 convolution
-        self.branch3 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=bottleneck_channels,
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            nn.BatchNorm1d(bottleneck_channels),
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels=bottleneck_channels,
-                out_channels=cfg.inception_block.branch3.out_channels,
-                kernel_size=5,
-                stride=1,
-                padding=2
-            ),
-            nn.BatchNorm1d(cfg.inception_block.branch3.out_channels),
-            nn.ReLU(),
-        )
-
-        # Branch 4: 41x1 convolution
-        self.branch4 = nn.Sequential(
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=bottleneck_channels,
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            nn.BatchNorm1d(bottleneck_channels),
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels=bottleneck_channels,
-                out_channels=cfg.inception_block.branch4.out_channels,
-                kernel_size=41,
-                stride=1,
-                padding=20
-            ),
-            nn.BatchNorm1d(cfg.inception_block.branch4.out_channels),
-            nn.ReLU(),
-        )
-
-        # Branch 5: Max pooling
-        self.branch5 = nn.Sequential(
-            nn.MaxPool1d(kernel_size=3, stride=1, padding=1),
-            nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=cfg.inception_block.branch5.out_channels,
-                kernel_size=1,
-                stride=1,
-                padding=0
-            ),
-            nn.BatchNorm1d(cfg.inception_block.branch5.out_channels),
-            nn.ReLU()
-        )
-
-    def forward(self, x):
-        # Parallel branches
-        b1 = self.branch1(x)
-        b2 = self.branch2(x)
-        b3 = self.branch3(x)
-        b4 = self.branch4(x)
-        b5 = self.branch5(x)
-
-        # Concatenate along the channel dimension
-        out = torch.cat([b1, b2, b3, b4, b5], dim=1)
-
-        return out
-
-class InceptionEncoder(nn.Module):
-
-    def __init__(self, cfg: DictConfig):
-        super().__init__()
-
-        layers = []
-        current_channels = 1
-        for i in range(cfg.inception_encoder.num_blocks):
-            layers.append(InceptionBlock(
-                in_channels=current_channels,
-                bottleneck_channels=cfg.inception_encoder.bottleneck_channels,
-                cfg=cfg
-                ))
-            
-            current_channels = (
-                cfg.inception_block.branch1.out_channels +
-                cfg.inception_block.branch2.out_channels +
-                cfg.inception_block.branch3.out_channels +
-                cfg.inception_block.branch4.out_channels +
-                cfg.inception_block.branch5.out_channels
-            )
-
-            # Small dropout layer
-            layers.append(nn.Dropout(cfg.inception_encoder.dropout))
-
-        # Pooling Layer
-        layers.append(nn.AdaptiveAvgPool1d(1))  # pooling layer
-        # Flatten
-        layers.append(nn.Flatten())
-        # Fully Connected Layyer
-        layers.append(nn.Linear(current_channels, cfg.feature_dim))
-        layers.append(nn.ReLU())
-
-        self.encoder = nn.Sequential(*layers)
-
-    def forward(self, x):
-        # x is of shape (B, num_electrodes, T):
-        # B: batch size, num_electrodes: 6, T: length of the signal
-        # Reshape to (B * num_electrodes, 1, T) for Conv1d
-        # Each electrode signal is processed independently
-        # and in parallel
-
-        assert x.dim() == 3, "Input must be of shape (B, N, T)"
-
-        B, N, T = x.shape
-        # Flatten to (B * N, T) and add a channel dimension
-        x = x.view(B * N, 1, T)
-
-        out = self.encoder(x)
-
-        # Reshape back to (B, N, feature_dim)
-        out = out.view(B, N, -1)
-
-        return out
 
 class DeepSetsContextEncoder(nn.Module):
     """Encoder for context information using DeepSets architecture"""
@@ -307,7 +87,6 @@ class DeepSetsContextEncoder(nn.Module):
         # in the batch
         return self.rho(pooled)
 
-
 class Classifier(nn.Module):
     """Decodes the latent representation into a classification of the
         input signal (which lead is it from)"""
@@ -345,7 +124,7 @@ class SigLoc12(nn.Module):
         self.feature_dim = cfg.feature_dim
         self.cfg = cfg
 
-        self.local_encoder = LocalEncoder(cfg)
+        self.local_encoder = SimpleCNN1D(cfg)
 
         self.context_encoder = DeepSetsContextEncoder(cfg)
 
@@ -375,7 +154,7 @@ class SigLoc12(nn.Module):
             features_expanded = all_features.repeat_interleave(N, dim=0)
 
             # Create target indices 0...5 for each sample in the batch
-            # (B*N, N)
+            # (B*N,)
             target_indices = torch.arange(N, device=signals.device).repeat(B)
 
             # Create context masks
@@ -478,7 +257,10 @@ class SigLocNolan(nn.Module):
         self.feature_dim = cfg.feature_dim
         self.cfg = cfg
 
-        self.local_encoder = InceptionEncoder(cfg)
+        if OmegaConf.select(self.cfg, "inception_encoder.skip_connection"):
+            self.local_encoder = InceptionEncoderWithRes(cfg)
+        else:
+            self.local_encoder = InceptionEncoder(cfg)
         self.context_encoder = DeepSetsContextEncoder(cfg)
         self.classifier = Classifier(cfg)
 

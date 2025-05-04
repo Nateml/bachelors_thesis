@@ -17,7 +17,7 @@ run:
   batch_size: 32
   checkpoint: true
   min_delta: 0.005
-  patience: 5
+  patience: 8
   checkpoint_path: checkpoints/${run.experiment_name}
   device: cuda
   log_level: info

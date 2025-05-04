@@ -1,0 +1,27 @@
+model_name: gru
+feature_dim: 64
+signal_length: 1000
+
+gru:
+  num_layers: 3
+  hidden_size: 64
+  bidirectional: false
+  dropout: 0
+
+context_encoder:
+  enabled: true
+  hidden_dim: 64
+  phi:
+    num_layers: 3
+    hidden_size: 64
+  rho:
+    num_layers: 1
+  pooling: sum  # Sum pooling
+
+classifier:
+  num_classes: 6
+  layers:
+    - out_size: 128
+    - in_size: 128
+      out_size: 64
+    - in_size: 64
