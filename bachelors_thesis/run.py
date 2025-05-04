@@ -1,3 +1,5 @@
+import sys
+
 import hydra
 from loguru import logger
 import numpy as np
@@ -130,4 +132,8 @@ def main(cfg: DictConfig):
     )
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Training interrupted.")
+        sys.exit(0)

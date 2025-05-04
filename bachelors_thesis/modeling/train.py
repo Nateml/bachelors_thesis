@@ -153,7 +153,6 @@ def train(
 
         # 2. Set up the optimizer
         assert cfg.optimizer.name == "adam", "Only Adam optimizer is supported"
-        # optimizer = Adam(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
         optimizer = AdamW(model.parameters(), lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
 
         # Set up scheduler if specified
@@ -167,7 +166,10 @@ def train(
         else:
             scheduler = None
 
-        best_val_loss = float('inf')
+        best_val_results = {
+            "loss": float('inf'),
+            "accuracy": 0.0,
+        }
         epochs_no_improvement = 0
         patience = cfg.run.patience
         min_delta = cfg.run.min_delta
@@ -183,16 +185,14 @@ def train(
                 scheduler.step(val_results['loss'])
                 logger.info(f"Learning rate: {optimizer.param_groups[0]['lr']}")
 
-            log_epoch_summary(epoch, train_results, val_results)
-            if cfg.wandb.enabled:
-                log_to_wandb(train_results, val_results, epoch, cfg)
+            is_best = val_results['loss'] + min_delta < best_val_results['loss']
 
             logger.info("-----------------------------------\n")
 
             # Check for early stopping
-            if val_results['loss'] + min_delta < best_val_loss:
+            if is_best:
                 epochs_no_improvement = 0
-                best_val_loss = val_results['loss']
+                best_val_results = val_results.copy()
 
                 # Save the model checkpoint
                 if cfg.run.checkpoint:
@@ -201,6 +201,11 @@ def train(
                     ) 
             else:
                 epochs_no_improvement += 1
+
+            # Logging
+            log_epoch_summary(epoch, train_results, val_results)
+            if cfg.wandb.enabled:
+                log_to_wandb(train_results, val_results, best_val_results, epoch, cfg)
 
             if epochs_no_improvement >= patience:
                 logger.info(f"Early stopping after epoch {epoch+1}/{cfg.run.epochs}")

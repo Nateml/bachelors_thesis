@@ -30,15 +30,17 @@ class AverageMeterDict:
     def average(self):
         return {k: meter.average() for k, meter in self.meters.items()}
 
-def log_to_wandb(train_metrics, val_metrics, epoch, cfg):
+def log_to_wandb(train_metrics, val_metrics, best_val_metrics, epoch, cfg):
     # Prepend "train" or "val" to the metrics
+    # If bool is True, add "best" to the val metrics
     train_results = {f"train/{k}": v for k, v in train_metrics.items()}
     val_results = {f"val/{k}": v for k, v in val_metrics.items()}
+    best_val_results = {f"val/best/{k}": v for k, v in val_metrics.items()}
     wandb.log({
         "epoch": epoch + 1,
         **train_results,
         **val_results,
-        "model_config": OmegaConf.to_container(cfg, resolve=True),
+        **best_val_results,
     })
 
 def save_checkpoint(model, cfg, epoch, metrics: dict, best: bool = False):
