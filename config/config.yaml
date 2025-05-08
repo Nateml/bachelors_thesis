@@ -1,7 +1,8 @@
 defaults:
-  - model: sigloc12
+  - model: siglabv2
   - dataset: ptbxl100all
   - optimizer: adam
+  - scheduler: reduce_lr_on_plateau
   - loss: cross_entropy
   - wandb: default
   - augment: default
@@ -13,11 +14,11 @@ run:
   name: baseline # A short name for the experiment
   experiment_name: ${run.exp_num}_${model.model_name}_${run.name}
   comment: "baseline"
-  epochs: 20
+  epochs: 60
   batch_size: 32
   checkpoint: true
-  min_delta: 0.005
-  patience: 8
+  min_delta: 0.001
+  patience: 6
   checkpoint_path: checkpoints/${run.experiment_name}
   device: cuda
   log_level: info

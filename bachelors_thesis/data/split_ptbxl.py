@@ -7,8 +7,9 @@ The processed data is saved as .npy files in the PROCESSED_DATA_DIR directory.
 The metadata is saved as .csv files for the training, validation, and test sets respectively. This metadata includes extra
 information such as patient identifiers and biometric data, signal metadata, and ecg statements.
 """
-from loguru import logger
 from pathlib import Path
+
+from loguru import logger
 import numpy as np
 import pandas as pd
 

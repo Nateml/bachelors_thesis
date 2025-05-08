@@ -1,10 +1,13 @@
-import torch
-import torch.nn as nn
 from typing import List, Optional
 
 from matplotlib import pyplot as plt
-from scipy.ndimage import gaussian_filter1d
 import numpy as np
+from prettytable import PrettyTable
+from scipy.ndimage import gaussian_filter1d
+from scipy.optimize import linear_sum_assignment
+import torch
+import torch.nn as nn
+
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 
 PRECORDIAL_LEAD_NAMES = [
@@ -14,6 +17,20 @@ PRECORDIAL_LEAD_NAMES = [
     "V4",
     "V5",
     "V6",
+]
+LEAD_NAMES = [
+    "I",
+    "II",
+    "III",
+    "aVR",
+    "aVL",
+    "aVF",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6"
 ]
 
 def _plot_traces(
@@ -141,6 +158,10 @@ def confusion_matrix(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray
     
     assert predictions.shape == targets.shape, "Predictions and targets must have the same shape."
     assert predictions.ndim == 2, "Predictions and targets must be 2D arrays."
+
+    # Change datatype to int
+    predictions = predictions.astype(int)
+    targets = targets.astype(int)
 
     n_classes = np.max(targets) + 1
     cm = np.zeros((n_classes, n_classes), dtype=int)
@@ -292,3 +313,46 @@ def plot_saliency(
     plt.show()
 
     return fig, axes
+
+def hungarian_predictions(logits):
+    if logits.ndim == 2:
+        logits = logits[np.newaxis, :, :]
+    elif logits.ndim != 3:
+        raise ValueError("Logits must be 2D or 3D array")
+
+    if isinstance(logits, torch.Tensor):
+        logits = logits.cpu().numpy()
+
+    B, N, C = logits.shape
+
+    predictions = np.zeros((B, N), dtype=np.int64)
+
+    for b in range(logits.shape[0]):
+        # Compute the optimal assignment of signals to leads
+        # Effectively we are choosing a one to one assignment of 
+        # signals to classes which maximizes the confidence of the model
+        # row_ind is the indices of the signals
+        # col_ind is the corresponding indices of the targets
+        # so, (row_ind[i], col_ind[i]) is the assignment of signal i to class col_ind[i]
+        # since logits is square, row_ind corresponds to np.arange(N) (e.g. [0, 1, 2, 3, 4, 5])
+        # ideally col_ind should be the same as targets (i.e. [0, 1, 2, 3, 4, 5] as well)
+        row_ind, col_ind = linear_sum_assignment(logits[b], maximize=True)
+
+        # Assign the predicted class to the corresponding signal
+        predictions[b, row_ind] = col_ind
+
+    return predictions
+
+
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        table.add_row([name, params])
+        total_params += params
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+    return total_params

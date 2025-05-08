@@ -10,6 +10,7 @@ from torch.amp.grad_scaler import GradScaler
 from torch.utils.data import DataLoader
 import wandb
 
+from bachelors_thesis.data.preprocessing import resample
 from bachelors_thesis.logger import init_logger
 from bachelors_thesis.modeling.train import train
 from bachelors_thesis.registries.dataset_registry import get_dataset
@@ -53,6 +54,10 @@ def main(cfg: DictConfig):
 
     # 1. Load the data
     data_path = cfg.dataset.path
+    if cfg.dataset.only_precordial:
+        data_path = data_path + "/precordial"
+    else:
+        data_path = data_path + "/all"
     train_data = np.load(data_path + "/train.npy")
     val_data = np.load(data_path + "/val.npy")
 
@@ -67,17 +72,22 @@ def main(cfg: DictConfig):
         )
 
         # Log dataset as a W&B artifact
-        dataset_artifact = wandb.Artifact(
-            name=f"{cfg.dataset.name}_dataset",
-            type="dataset",
-            metadata={
-                "description": cfg.dataset.description,
-                "path": cfg.dataset.path,
-                "sampling_rate": cfg.dataset.sampling_rate
-            }
-        )
-        dataset_artifact.add_dir(cfg.dataset.path)
-        wandb.log_artifact(dataset_artifact)
+        #dataset_artifact = wandb.Artifact(
+        #    name=f"{cfg.dataset.name}_dataset",
+        #    type="dataset",
+        #    metadata={
+        #        "description": cfg.dataset.description,
+        #        "path": cfg.dataset.path,
+        #        "sampling_rate": cfg.dataset.sampling_rate
+        #    }
+        #)
+        #dataset_artifact.add_dir(cfg.dataset.path)
+        #wandb.log_artifact(dataset_artifact)
+
+    if OmegaConf.select(cfg, "dataset.resampled_rate"):
+        logger.info(f"Resampling data to {cfg.dataset.resampled_rate} Hz...")
+        train_data = resample(train_data, cfg.dataset.sampling_rate, cfg.dataset.resampled_rate)
+        val_data = resample(val_data, cfg.dataset.sampling_rate, cfg.dataset.resampled_rate)
 
     # Preprocess the data
     for preprocessor in cfg.preprocessor_group.preprocessors:

@@ -1,0 +1,26 @@
+program: bachelors_thesis/run.py
+command:
+  - ${env}
+  - C:/Users/natem/bachelors_thesis/env/Scripts/python.exe
+  - ${program}
+  - ${args_no_hyphens}
+  - model=siglabv2
+  - run.name=sweep
+  - run.epochs=60
+method: bayes
+metric:
+  goal: maximize
+  name: val/best/accuracy
+parameters:
+  run.batch_size:
+    max: 64
+    min: 32
+    distribution: int_uniform
+  optimizer.lr:
+    max: 1e-3
+    min: 1e-4
+    distribution: uniform
+  model.num_belief_updates:
+    max: 6
+    min: 0
+    distribution: int_uniform

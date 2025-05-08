@@ -1,0 +1,7 @@
+name: cosine_annealing_warm_restarts
+params:
+  T_0: 10 # Number of iterations for the first restart
+  T_mult: 2 # Factor by which to increase T_0 after each restart
+  eta_min: 1e-7 # Minimum learning rate
+  last_epoch: -1 # Last epoch, -1 means start from scratch
+  verbose: deprecated # Verbose output

@@ -1,6 +1,5 @@
 import pathlib
 
-from omegaconf import OmegaConf
 import torch
 import wandb
 
@@ -35,7 +34,7 @@ def log_to_wandb(train_metrics, val_metrics, best_val_metrics, epoch, cfg):
     # If bool is True, add "best" to the val metrics
     train_results = {f"train/{k}": v for k, v in train_metrics.items()}
     val_results = {f"val/{k}": v for k, v in val_metrics.items()}
-    best_val_results = {f"val/best/{k}": v for k, v in val_metrics.items()}
+    best_val_results = {f"val/best/{k}": v for k, v in best_val_metrics.items()}
     wandb.log({
         "epoch": epoch + 1,
         **train_results,

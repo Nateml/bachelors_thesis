@@ -1,0 +1,5 @@
+name: focal-loss
+description: "Focal loss function which is a modification of the standard cross-entropy loss function. It is designed to address class imbalance by down-weighting the loss contribution from easy-to-classify examples and focusing more on hard-to-classify examples."
+alpha: 1
+gamma: 2.0
+reduction: mean

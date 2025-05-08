@@ -1,0 +1,11 @@
+name: simplecnn
+
+num_cnn_layers: 3
+in_channels: [1, 32, 64, 128, 256]
+out_channels: [32, 64, 128, 256, 512]
+kernel_sizes: [11, 9, 7, 5, 3]
+strides: [1, 1, 1, 1, 1]
+paddings: [5, 4, 3, 2, 1]
+
+light_dropout: 0.1
+heavy_dropout: 0.3

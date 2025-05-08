@@ -1,0 +1,20 @@
+name: inception
+
+num_inception_blocks: 4
+bottleneck_channels: 64
+dropout: 0.2
+
+inception_block:
+  branch1:
+    out_channels: 32
+  branch2:
+    kernel_size: 5
+    padding: 2
+    out_channels: 32
+  branch3:
+    kernel_size: 11
+    padding: 5
+    out_channels: 32
+  branch4:
+    maxpool_size: 3
+    out_channels: 32

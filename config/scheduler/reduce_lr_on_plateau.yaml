@@ -1,0 +1,5 @@
+name: reduce_lr_on_plateau
+params:
+  mode: min
+  patience: 4
+  factor: 0.5

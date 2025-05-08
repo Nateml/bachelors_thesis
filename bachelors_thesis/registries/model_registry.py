@@ -1,17 +1,15 @@
 from typing import Callable, Tuple, Type
 
-from bachelors_thesis.modeling.aura12 import AURA12
-from bachelors_thesis.modeling.aura12 import loss_step as aura12_loss_step
-from bachelors_thesis.modeling.cnngru import CNNGru
-from bachelors_thesis.modeling.cnngru import loss_step as cnngru_loss_step
-from bachelors_thesis.modeling.gru import GruModel
-from bachelors_thesis.modeling.gru import loss_step as gru_loss_step
-from bachelors_thesis.modeling.siglab import SigLab
-from bachelors_thesis.modeling.siglab import loss_step as siglab_loss_step
-from bachelors_thesis.modeling.sigloc import SigLoc12, SigLocNolan
-from bachelors_thesis.modeling.sigloc import loss_step as sigloc_loss_step
-from bachelors_thesis.modeling.siglabv2 import SigLabV2
-from bachelors_thesis.modeling.siglabv2 import loss_step as siglabv2_loss_step
+from bachelors_thesis.modeling.old.aura12 import AURA12
+from bachelors_thesis.modeling.old.aura12 import loss_step as aura12_loss_step
+from bachelors_thesis.modeling.old.cnngru import CNNGru
+from bachelors_thesis.modeling.old.cnngru import loss_step as cnngru_loss_step
+from bachelors_thesis.modeling.old.gru import GruModel
+from bachelors_thesis.modeling.old.gru import loss_step as gru_loss_step
+from bachelors_thesis.modeling.old.sigloc import SigLoc12, SigLocNolan
+from bachelors_thesis.modeling.old.sigloc import loss_step as sigloc_loss_step
+from bachelors_thesis.modeling.siglabv2.siglabv2 import SigLabV2
+from bachelors_thesis.modeling.siglabv2.siglabv2 import loss_step as siglabv2_loss_step
 
 
 def get_model(model_name: str) -> Tuple[Type, Callable]:
@@ -23,8 +21,6 @@ def get_model(model_name: str) -> Tuple[Type, Callable]:
         return AURA12, aura12_loss_step
     elif model_name == "sigloc12":
         return SigLoc12, sigloc_loss_step
-    elif model_name == "siglab":
-        return SigLab, siglab_loss_step
     elif model_name == "sigloc-nolan":
         return SigLocNolan, sigloc_loss_step
     elif model_name == "gru":
@@ -35,6 +31,6 @@ def get_model(model_name: str) -> Tuple[Type, Callable]:
         return SigLabV2, siglabv2_loss_step
     else:
         raise ValueError(f"Model {model_name} not found. Available models: "
-                         f"aura12, sigloc12, siglab, sigloc-nolan, gru, cnngru, siglabv2")
+                         f"aura12, sigloc12, sigloc-nolan, gru, cnngru, siglabv2")
 
 

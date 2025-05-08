@@ -1,0 +1,6 @@
+name: cosine_annealing
+params:
+  T_max: 30 # Number of iterations for one cycle
+  eta_min: 1e-7 # Minimum learning rate
+  last_epoch: -1 # Last epoch, -1 means start from scratch
+  verbose: deprecated # Verbose output

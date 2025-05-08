@@ -1,6 +1,7 @@
 from loguru import logger as log
 import numpy as np
 from scipy.signal import butter, lfilter
+from scipy.signal import resample as _resample
 
 
 def bandpass(data, *, sampling_rate, order=4, low=0.4, high=40, **kwargs):
@@ -75,3 +76,52 @@ def highpass(data, *, sampling_rate, order=4, low=0.5, **kwargs):
 
     else:
         raise ValueError(f"Unsupported data shape: {data.shape}. Expected 1D, 2D, or 3D array.")
+
+def z_score(data, **kwargs):
+    """
+    Apply a z-score normalization to signals.
+
+    data: np.ndarray
+
+    Accepts data of shape:
+        - (N, T, C) for multiple signals with multiple channels
+    """
+    data = np.asarray(data)
+
+    # Shape (N, T, C)
+    N, T, C = data.shape
+
+    if C > T:
+        log.warning("Preprocessing warning: Number of channels is greater than number of samples." \
+        "Are you sure the data is in the right shape?")
+
+    reshaped = data.transpose(0, 2, 1).reshape(-1, T)
+    normalized = np.array([(sig - np.mean(sig)) / np.std(sig) for sig in reshaped])
+    return normalized.reshape(N, C, T).transpose(0, 2, 1)
+
+
+def resample(data, sampling_rate, target_rate):
+    """
+    Resample the data to the target sampling rate.
+
+    data: np.ndarray
+
+    Accepts data of shape:
+        - (N, T, C) for multiple signals with multiple channels
+    """
+    data = np.asarray(data)
+
+    # Shape (N, T, C)
+    N, T, C = data.shape
+
+    if C > T:
+        log.warning("Preprocessing warning: Number of channels is greater than number of samples." \
+        "Are you sure the data is in the right shape?")
+
+
+    num = int(T * target_rate / sampling_rate)
+    resampled = np.array(
+        [_resample(sig, num, axis=1) for sig in data.transpose(0, 2, 1)]
+    )
+
+    return resampled.transpose(0, 2, 1)  # (N, C, T) -> (N, T, C)

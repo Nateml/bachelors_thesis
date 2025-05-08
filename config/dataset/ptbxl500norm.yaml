@@ -1,4 +1,5 @@
 name: ptbxl500norm
-path: data/processed/ptbxl500norm/precordial
+path: data/processed/ptbxl500norm
+only_precordial: true
 sampling_rate: 500
 description: "PTB-XL, 500Hz, Normal Heartbeats"

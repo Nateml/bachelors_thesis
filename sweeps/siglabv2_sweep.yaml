@@ -1,0 +1,56 @@
+program: bachelors_thesis/run.py
+command:
+  - ${env}
+  - C:/Users/natem/bachelors_thesis/env/Scripts/python.exe
+  - ${program}
+  - ${args_no_hyphens}
+  - model=siglabv2
+  - run.name=sweep
+  - run.epochs=60
+  - optimizer.lr=0.0007100279295084655
+  - run.batch_size=38
+method: bayes
+metric:
+  goal: maximize
+  name: val/best/accuracy
+parameters:
+  model.num_belief_updates:
+    max: 5
+    min: 1
+    distribution: int_uniform
+  model.gru.num_layers:
+    max: 4
+    min: 1
+    distribution: int_uniform
+  model.gru.dropout:
+    max: 0.5
+    min: 0.2
+    distribution: uniform
+  model.encoder.num_inception_blocks:
+    max: 4
+    min: 2
+    distribution: int_uniform
+  model.sab.num_heads:
+    values:
+      - 4
+      - 8
+      - 16
+    distribution: categorical
+  model.sab.ffn_expansion:
+    max: 6
+    min: 2
+    distribution: int_uniform
+  model.inception_block.bottleneck_channels:
+    max: 128
+    min: 32
+    distribution: int_uniform
+  model.encoder.cnn_dropout:
+    max: 0.5
+    min: 0.2
+    distribution: uniform   
+  model.feature_dim:
+    values:
+      - 64
+      - 128
+      - 256
+    distribution: categorical

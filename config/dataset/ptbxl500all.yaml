@@ -1,4 +1,6 @@
 name: ptbxl500all
-path: data/processed/ptbxl500all/precordial/
+path: data/processed/ptbxl500all/
+only_precordial: true
 sampling_rate: 500
+resampled_rate: 200
 description: "PTB-XL, 500Hz, All Heartbeats"

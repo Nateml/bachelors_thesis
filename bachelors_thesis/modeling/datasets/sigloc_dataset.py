@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 
 class SigLocDataset(Dataset):
-    def __init__(self, ecg_tensor, augment_cfg=None, **kwargs):
+    def __init__(self, ecg_tensor, augment_cfg=None, shuffle_leads=False, **kwargs):
         """
         ecg_tensor: A tensor of shape (N, E, T) where N is the number
                     of samples, E is the number of electrode signals,
@@ -16,6 +16,7 @@ class SigLocDataset(Dataset):
         self.ecgs = ecg_tensor
         self.augment_cfg = augment_cfg
         self.random = random.Random(42)
+        self.shuffle_leads = shuffle_leads
 
     def __len__(self):
         # Number of samples 
@@ -29,7 +30,18 @@ class SigLocDataset(Dataset):
         if self.augment_cfg and self.augment_cfg.augment and self.random.random() < self.augment_cfg.augment_chance:
             ecg = self._augment(ecg)
 
-        return ecg
+        # Shuffle along the lead dimension
+        # Generate a random lead order for each sample in the batch
+        lead_order = list(range(ecg.size(0)))  # [0, 1, 2, 3, 4, 5]
+        if self.shuffle_leads:
+            lead_order = self.random.sample(range(ecg.size(0)), ecg.size(0))
+            # Shuffle the leads in the ECG sample
+            ecg = ecg[lead_order, :]
+
+        # Convert lead_order to a tensor
+        lead_order = torch.tensor(lead_order, dtype=torch.long)
+
+        return ecg, lead_order
 
     def _augment(self, ecg):
         augmentations = [
