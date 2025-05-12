@@ -5,15 +5,8 @@ import numpy as np
 import wfdb
 
 from bachelors_thesis.config import RAW_DATA_DIR
+from bachelors_thesis.data.load_ptbdata_new import PRECORDIAL_LEADS
 
-PRECORDIAL_LEADS = {
-    "V1",
-    "V2",
-    "V3",
-    "V4",
-    "V5",
-    "V6",
-}
 
 def get_ecg_signals_from_file(
         filename: str,

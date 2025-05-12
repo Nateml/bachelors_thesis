@@ -2,7 +2,7 @@ defaults:
   - model: siglabv2
   - dataset: ptbxl100all
   - optimizer: adam
-  - scheduler: reduce_lr_on_plateau
+  - scheduler: cosine_annealing
   - loss: cross_entropy
   - wandb: default
   - augment: default
@@ -15,14 +15,16 @@ run:
   experiment_name: ${run.exp_num}_${model.model_name}_${run.name}
   comment: "baseline"
   epochs: 60
-  batch_size: 32
+  batch_size: 38
   checkpoint: true
-  min_delta: 0.001
-  patience: 6
+  min_delta: 0.00001
+  patience: 10
   checkpoint_path: checkpoints/${run.experiment_name}
   device: cuda
   log_level: info
   log_file: logs/${run.experiment_name}.log
   amp_dtype: float16 # Data type for AMP (Automatic Mixed Precision)
+  seed: 42
+  leads: precordial  # Options: precordial, limb, augmented, all
 
 run_name: ${model.model_name}_${dataset.name}

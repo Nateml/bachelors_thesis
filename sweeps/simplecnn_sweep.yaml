@@ -1,0 +1,22 @@
+program: bachelors_thesis/run.py
+command:
+  - ${env}
+  - C:/Users/natem/bachelors_thesis/env/Scripts/python.exe
+  - ${program}
+  - ${args_no_hyphens}
+  - model=siglabv2
+  - run.name=sweep
+  - run.epochs=60
+
+method: bayes
+goal: maximize
+metric:
+  name: val/best/accuracy
+
+parameters:
+  model.encoder.kernel_sizes:
+    values:
+      - [2, 9, 7, 5, 3]
+      - [9, 7, 5, 3, 1]
+      - [7, 5, 3, 1, 1]
+    distribution: categorical

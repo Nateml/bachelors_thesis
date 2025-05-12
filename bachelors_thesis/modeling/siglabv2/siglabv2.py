@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.modeling.set_transformer.blocks import SetAttentionBlock
+from bachelors_thesis.modeling.set_transformer.blocks import SetAttentionBlock, InducedSetAttentionBlock
 from bachelors_thesis.registries.encoder_registry import get_encoder
 
 
@@ -178,12 +178,16 @@ class SigLabV2(nn.Module):
 
         # This used to be after the sab
         #self.init_head = Classifier(cfg)
-        #self.init_head = nn.Linear(cfg.feature_dim, cfg.num_classes)
+        self.init_head = nn.Linear(cfg.feature_dim, cfg.num_classes)
 
         # --------2) Attention enriched features ---------
         #self.sab = SetAttentionBlock(self.feature_dim, cfg.sab.num_heads, cfg.sab.ffn_expansion)
+        #self.attention_blocks = nn.ModuleList([
+        #    SetAttentionBlock(self.feature_dim, cfg.sab.num_heads, cfg.sab.ffn_expansion, mha_dropout=cfg.sab.mha_dropout)
+        #    for _ in range(cfg.num_belief_updates)
+        #])
         self.attention_blocks = nn.ModuleList([
-            SetAttentionBlock(self.feature_dim, cfg.sab.num_heads, cfg.sab.ffn_expansion, mha_dropout=cfg.sab.mha_dropout)
+            SetAttentionBlock(self.feature_dim, cfg.sab.num_heads, ffn_expansion=cfg.sab.ffn_expansion, mha_dropout=cfg.sab.mha_dropout)
             for _ in range(cfg.num_belief_updates)
         ])
 
@@ -291,7 +295,9 @@ def loss_step(
     # Compute loss
     if cfg.loss.name == "cross-entropy":
         # Main loss
-        losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(N)]
+        # I am only going to use the precordial leads for the loss because
+        # for this experiment I only care about precordial accuracy
+        losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(6)]
         loss = torch.stack(losses).mean()
 
         # Loss for intermediate predictions
@@ -323,7 +329,15 @@ def loss_step(
     correct = (preds == targets).float()
     acc = correct.mean()
 
+    # Compute precordial accuracy
+    precordial_leads = [0, 1, 2, 3, 4, 5]  # Assuming precordial leads are the first 6 leads
+    precordial_logits = logits[:, precordial_leads]
+    precordial_preds = precordial_logits.argmax(-1)  # (B, N)
+    precordial_correct = (precordial_preds == targets[:, precordial_leads]).float()
+    precordial_acc = precordial_correct.mean()
+
     return loss, {
         "loss": loss.item(),
-        "accuracy": acc.item()
+        "accuracy": acc.item(),
+        "precordial_accuracy": precordial_acc.item()
     }

@@ -1,0 +1,19 @@
+name: simplecnn_gru
+
+gru:
+  num_layers: 1
+  bidirectional: true
+  hidden_size: 128
+  attn_dim: 256
+  dropout: 0
+  final_dropout: 0
+
+cnn:
+  in_channels: [1, 32, 64]
+  out_channels: [32, 64, 128]
+  kernel_sizes: [11, 7, 5]
+  strides: [1, 1, 1]
+  paddings: [5, 3, 2]
+
+  light_dropout: 0
+  heavy_dropout: 0

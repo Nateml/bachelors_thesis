@@ -1,12 +1,18 @@
 import random
 
+import numpy as np
 import torch
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
+from bachelors_thesis.data.load_ptbdata_new import (
+    ALL_LEADS,
+    PRECORDIAL_LEADS,
+)
+
 
 class SigLocDataset(Dataset):
-    def __init__(self, ecg_tensor, augment_cfg=None, shuffle_leads=False, **kwargs):
+    def __init__(self, ecg_tensor, augment_cfg=None, shuffle_leads=False, filter_leads=PRECORDIAL_LEADS, **kwargs):
         """
         ecg_tensor: A tensor of shape (N, E, T) where N is the number
                     of samples, E is the number of electrode signals,
@@ -14,6 +20,27 @@ class SigLocDataset(Dataset):
         """
         super().__init__()
         self.ecgs = ecg_tensor
+        self.filter_leads = filter_leads
+
+        is_precordial_dataset = True if self.ecgs.shape[1] == len(PRECORDIAL_LEADS) else False
+        is_full_dataset = True if self.ecgs.shape[1] == len(ALL_LEADS) else False
+
+        # Filter only the leads we want
+        if filter_leads is not None:
+            if is_precordial_dataset:
+                self.lead_indices = [PRECORDIAL_LEADS.index(lead) for lead in filter_leads]
+            elif is_full_dataset:
+                self.lead_indices = [ALL_LEADS.index(lead) for lead in filter_leads]
+                # self.ecgs = [0 1 2 3 4 5 6 7 8 9 10 11]
+                # self.ecgs = [0 1 2 6 7 8 9 10 11]
+            else:
+                raise ValueError("Invalid number of leads in the input tensor: " + str(self.ecgs.shape[1]))
+
+        self.ecgs = self.ecgs[:, self.lead_indices, :]
+        self.index_to_label = {i: lead for i, lead in enumerate(filter_leads)}
+
+        self.label_order = np.arange(len(filter_leads))
+
         self.augment_cfg = augment_cfg
         self.random = random.Random(42)
         self.shuffle_leads = shuffle_leads
@@ -32,11 +59,12 @@ class SigLocDataset(Dataset):
 
         # Shuffle along the lead dimension
         # Generate a random lead order for each sample in the batch
-        lead_order = list(range(ecg.size(0)))  # [0, 1, 2, 3, 4, 5]
+        lead_order = self.label_order.copy()
         if self.shuffle_leads:
-            lead_order = self.random.sample(range(ecg.size(0)), ecg.size(0))
+            lead_order = self.random.sample(lead_order, len(lead_order))
             # Shuffle the leads in the ECG sample
-            ecg = ecg[lead_order, :]
+
+        ecg = ecg[lead_order, :]
 
         # Convert lead_order to a tensor
         lead_order = torch.tensor(lead_order, dtype=torch.long)

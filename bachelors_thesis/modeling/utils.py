@@ -2,6 +2,7 @@ import pathlib
 
 import torch
 import wandb
+from omegaconf import OmegaConf
 
 
 class AverageMeter:
@@ -66,3 +67,22 @@ def save_checkpoint(model, cfg, epoch, metrics: dict, best: bool = False):
     if best:
         aliases.append("best")
     wandb.log_artifact(artifact, aliases=aliases)
+
+def load_model_from_wandb(model_type, project_path: str, run_id: str, version: str, device: str = "cuda"):
+    api = wandb.Api()
+
+    run = api.run(f"{project_path}/{run_id}")
+    config = dict(run.config)
+
+    run_name = run.name
+    artifact = api.artifact(f"{project_path}/{run_name}:{version}")
+    artifact_path = artifact.download()
+
+    cfg = OmegaConf.create(config)
+
+    checkpoint = torch.load(artifact_path + f"/{run_name}.pth", map_location=device)
+
+    model = model_type(cfg.model).to(device)
+    model.load_state_dict(checkpoint)
+
+    return model, cfg

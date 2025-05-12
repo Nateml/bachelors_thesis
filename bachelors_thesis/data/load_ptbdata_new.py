@@ -8,6 +8,28 @@ import numpy as np
 import pandas as pd
 import wfdb
 
+PRECORDIAL_LEADS = [
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+]
+
+LIMB_LEADS = [
+    "I",
+    "II",
+    "III"
+]
+
+AUGMENTED_LEADS = [
+    "aVR",
+    "aVL",
+    "aVF"
+]
+
+ALL_LEADS = LIMB_LEADS + AUGMENTED_LEADS + PRECORDIAL_LEADS
 
 def load_data(
         data_path: str,
@@ -62,12 +84,16 @@ def load_data(
         """Return column indices of precordial leads inside *header*."""
         return [i for i, lead in enumerate(header.sig_name)
                 if lead in {"V1", "V2", "V3", "V4", "V5", "V6"}]
+
+    def lead_indices_in_order(header: Any, desired_order: List[str]) -> List[int]:
+        name2idx = {name.lower(): i for i, name in enumerate(header.sig_name)}
+        return [name2idx[lead.lower()] for lead in desired_order if lead.lower() in name2idx]
     
-    def _load_one(path:str, keep_only_pre: bool) -> np.ndarray:
+    def _load_one(path:str, desired_leads) -> np.ndarray:
         header = wfdb.rdheader(path)
-        channels = _precordial_indices(header) if keep_only_pre else None
-        signal, _ = wfdb.rdsamp(path, channels=channels)
-        return signal.astype(np.float32)
+        idx = lead_indices_in_order(header, desired_leads)
+        sig, _ = wfdb.rdsamp(path, channels=idx)
+        return sig.astype(np.float32)
     
     # --------------------------------------------
     # metadata
@@ -110,12 +136,22 @@ def load_data(
     filenames = meta[fname_col].to_numpy()
     full_paths = [os.path.join(data_path, fn) for fn in filenames]
 
+    # Choose the leads to keep
+    if only_precordial_leads:
+        # Precordial leads
+        desired_leads = PRECORDIAL_LEADS
+    else:
+        # All leads
+        desired_leads = ALL_LEADS
+
+    print(f"[filter] Keeping {len(desired_leads)} leads: {desired_leads}")
+
     # -----------------------------------------------------------------
     # read signal files in parallel (IO-bound -> threads are fine here)
     # -----------------------------------------------------------------
     print(f"[signals] Loading {len(full_paths)} WFDB files with ThreadPoolExecutor ..")
     with ThreadPoolExecutor(max_workers=n_workers) as pool:
-        signals = list(pool.map(partial(_load_one, keep_only_pre=only_precordial_leads),
+        signals = list(pool.map(partial(_load_one, desired_leads=desired_leads),
                                 full_paths))
     print("[signals] Finished loading waveforms.")
 

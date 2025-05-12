@@ -8,6 +8,14 @@ from bachelors_thesis.modeling.old.gru import GruModel
 from bachelors_thesis.modeling.old.gru import loss_step as gru_loss_step
 from bachelors_thesis.modeling.old.sigloc import SigLoc12, SigLocNolan
 from bachelors_thesis.modeling.old.sigloc import loss_step as sigloc_loss_step
+from bachelors_thesis.modeling.siglabv2.siglab_deepsets import SigLabDeepsets
+from bachelors_thesis.modeling.siglabv2.siglab_deepsets import (
+    loss_step as siglab_deepsets_loss_step,
+)
+from bachelors_thesis.modeling.siglabv2.siglab_nocontext import SigLabNoContext
+from bachelors_thesis.modeling.siglabv2.siglab_nocontext import (
+    loss_step as siglab_nocontext_loss_step,
+)
 from bachelors_thesis.modeling.siglabv2.siglabv2 import SigLabV2
 from bachelors_thesis.modeling.siglabv2.siglabv2 import loss_step as siglabv2_loss_step
 
@@ -29,8 +37,12 @@ def get_model(model_name: str) -> Tuple[Type, Callable]:
         return CNNGru, cnngru_loss_step
     elif model_name == "siglabv2":
         return SigLabV2, siglabv2_loss_step
+    elif model_name == "siglab_deepsets":
+        return SigLabDeepsets, siglab_deepsets_loss_step
+    elif model_name == "siglab_nocontext":
+        return SigLabNoContext, siglab_nocontext_loss_step
     else:
         raise ValueError(f"Model {model_name} not found. Available models: "
-                         f"aura12, sigloc12, sigloc-nolan, gru, cnngru, siglabv2")
+                         f"aura12, sigloc12, sigloc-nolan, gru, cnngru, siglabv2, siglab_deepsets")
 
 

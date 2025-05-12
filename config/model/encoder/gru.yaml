@@ -1,7 +1,7 @@
 name: gru
 
-hidden_size: 256
+hidden_size: 128
 input_features: 1
 bidirectional: false
-num_layers: 3
-dropout: 0.3
+num_layers: 1
+dropout: 0

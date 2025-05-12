@@ -1,0 +1,9 @@
+name: lstmattention
+
+num_layers: 1
+input_features: 1
+hidden_size: 128
+dropout: 0
+final_dropout: 0
+bidirectional: false
+attn_dim: 256

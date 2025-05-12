@@ -1,21 +1,23 @@
 defaults:
   - encoder: cnn_gru
 
-model_name: siglabv2
+model_name: siglab_nocontext
+
 feature_dim: 128
 signal_length: 1000
 num_classes: 6
 num_belief_updates: 5
 
-sab:
-  num_heads: 8
-  ffn_expansion: 4
-  mha_dropout: 0
-
 classifier:
-  in_size: ${model.feature_dim}
+  in_size: 128
   layers:
     - out_size: 256
     - in_size: 256
+      out_size: 256
+    - in_size: 256
+      out_size: 256
+    - in_size: 256
+      out_size: 128
+    - in_size: 128
       out_size: 128
     - in_size: 128

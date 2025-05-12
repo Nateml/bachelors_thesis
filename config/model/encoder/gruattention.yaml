@@ -1,0 +1,10 @@
+
+name: gruattention
+
+hidden_size: 128
+input_features: 1
+bidirectional: false
+num_layers: 2
+dropout: 0
+final_dropout: 0
+attn_dim: 128

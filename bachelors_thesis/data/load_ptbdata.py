@@ -11,6 +11,29 @@ import pandas as pd
 import wfdb
 
 
+PRECORDIAL_LEADS = [
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+]
+
+LIMB_LEADS = [
+    "I",
+    "II",
+    "III"
+]
+
+AUGMENTED_LEADS = [
+    "aVR",
+    "aVL",
+    "aVF"
+]
+
+ALL_LEADS = LIMB_LEADS + AUGMENTED_LEADS + PRECORDIAL_LEADS
+
 def load_data(
         data_path,
         sampling_rate,
@@ -79,10 +102,9 @@ def load_data(
     # This is the order in which the channels will be stored in the .npy file
     # This order is important for the model to work properly
     if only_precordial_leads:
-        lead_set = ["V1", "V2", "V3", "V4", "V5", "V6"]
+        lead_set = PRECORDIAL_LEADS
     else:
-        lead_set = ["I", "II", "III", "aVR", "aVL", "aVF"] + \
-                   ["V1", "V2", "V3", "V4", "V5", "V6"]
+        lead_set = ALL_LEADS
 
     # Load raw signal data
     print("Loading raw signal data...")

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -43,6 +44,10 @@ class DeepSetsContextEncoder(nn.Module):
                 A context vector for each sample in the batch
         """
         B, N, D = features.shape
+
+        if mask is None:
+            # If no mask is provided, create a mask of ones
+            mask = torch.ones(B, N, dtype=torch.bool, device=features.device)
 
         assert mask.shape == (B, N), "Mask shape must match features shape"
 

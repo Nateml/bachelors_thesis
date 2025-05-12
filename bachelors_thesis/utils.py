@@ -347,12 +347,16 @@ def hungarian_predictions(logits):
 def count_parameters(model):
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
+    encoder_params = 0
     for name, parameter in model.named_parameters():
         if not parameter.requires_grad:
             continue
         params = parameter.numel()
         table.add_row([name, params])
         total_params += params
+        if name.startswith("encoder"):
+            encoder_params += params
     print(table)
     print(f"Total Trainable Params: {total_params}")
-    return total_params
+    print(f"Encoder Trainable Params: {encoder_params}")
+    return total_params, encoder_params

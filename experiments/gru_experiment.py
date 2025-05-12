@@ -15,21 +15,39 @@ from bachelors_thesis.logger import init_logger
 from bachelors_thesis.modeling.train import train
 from bachelors_thesis.registries.dataset_registry import get_dataset
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
-from bachelors_thesis.data.load_ptbdata_new import PRECORDIAL_LEADS, LIMB_LEADS, AUGMENTED_LEADS, ALL_LEADS
 
 # Enable cuDNN autotuner for performance optimization
 # This is useful for convolutional networks
 # It will test a few convolution algorithms and pick the fastest one
 # Small overhead at sartup, but should improve performance
-#torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.benchmark = True
 
-lead_sets = {
-    'precordial': PRECORDIAL_LEADS,
-    'limb': PRECORDIAL_LEADS + LIMB_LEADS,
-    'augmented': PRECORDIAL_LEADS + AUGMENTED_LEADS,
-    'all': PRECORDIAL_LEADS + LIMB_LEADS + AUGMENTED_LEADS
-}
-
+params = [
+    {
+        "hidden_size": 128,
+        "num_layers": 1,
+        "bidirectional": False,
+        "dropout": 0.1
+    },
+    {
+        "hidden_size": 128,
+        "num_layers": 2,
+        "bidirectional": False,
+        "dropout": 0.1
+    },
+    {
+        "hidden_size": 128,
+        "num_layers": 3,
+        "bidirectional": False,
+        "dropout": 0.1
+    },
+    {
+        "hidden_size": 128,
+        "num_layers": 4,
+        "bidirectional": True,
+        "dropout": 0.1
+    }
+]
 
 def _make_amp_objs(device: str, amp_dtype: str):
     use_amp = bool(amp_dtype)
@@ -59,15 +77,6 @@ def main(cfg: DictConfig):
     # AMP settings
     scaler, autocast_ctx = _make_amp_objs(cfg.run.device, OmegaConf.select(cfg, "run.amp_dtype"))
     logger.info(f"Using AMP: {scaler is not None}")
-
-    # Torch random seed
-    seed = OmegaConf.select(cfg, "run.seed", default=42)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    if cfg.run.device == "cuda":
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
 
     # 1. Load the data
     data_path = cfg.dataset.path
@@ -131,23 +140,16 @@ def main(cfg: DictConfig):
     val_data = val_data.permute(0, 2, 1)
 
     # Create the dataset
-    lead_filter = lead_sets[OmegaConf.select(cfg, "run.leads", default="precordial")]
-
-    # Create train leads with the desired leads
-    train_dataset = torch_dataset(train_data, augment_cfg=cfg.augment, filter_leads=lead_filter)
+    train_dataset = torch_dataset(train_data, augment_cfg=cfg.augment)
     # Leave out the augmentation for validation
-    # Only validate on precordial leads
-    val_dataset = torch_dataset(val_data, augment_cfg=None, filter_leads=lead_filter)
+    val_dataset = torch_dataset(val_data, augment_cfg=None)
     
     # 4. Create the dataloaders
-    g = torch.Generator()
-    g.manual_seed(seed)
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=cfg.run.batch_size,
         shuffle=True,
-        pin_memory=True,
-        generator=g
+        pin_memory=True
     )
     val_dataloader = DataLoader(
         val_dataset,
