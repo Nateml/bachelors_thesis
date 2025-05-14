@@ -40,6 +40,7 @@ class SigLocDataset(Dataset):
         self.index_to_label = {i: lead for i, lead in enumerate(filter_leads)}
 
         self.label_order = np.arange(len(filter_leads))
+        self.label_order_tensor = torch.tensor(self.label_order, dtype=torch.long)
 
         self.augment_cfg = augment_cfg
         self.random = random.Random(42)
@@ -69,7 +70,7 @@ class SigLocDataset(Dataset):
         # Convert lead_order to a tensor
         lead_order = torch.tensor(lead_order, dtype=torch.long)
 
-        return ecg, lead_order
+        return ecg, self.label_order
 
     def _augment(self, ecg):
         augmentations = [

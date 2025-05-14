@@ -110,7 +110,8 @@ def train(
     train_dataloader: DataLoader,
     val_dataloader: DataLoader,
     scaler: torch.cuda.amp.GradScaler = None,
-    autocast: torch.cuda.amp.autocast = torch.enable_grad
+    autocast: torch.cuda.amp.autocast = torch.enable_grad,
+    state_dict: dict = None
 ):
     """
     Trains the AURA12 model on the provided dataloader.
@@ -136,6 +137,14 @@ def train(
         # 1. Load model from registry
         model_type, loss_fn = get_model(cfg.model.model_name)
         model = model_type(cfg.model).to(cfg.run.device)
+
+        # Load the model state dict if provided
+        if state_dict:
+            try:
+                model.load_state_dict(state_dict)
+            except RuntimeError as e:
+                logger.error(f"Error loading checkpoint as state dict: {e.args}")
+                logger.warning("Ignoring checkpoint and starting from scratch.")
 
         # 2. Set up the optimizer
         assert cfg.optimizer.name == "adam", "Only Adam optimizer is supported"

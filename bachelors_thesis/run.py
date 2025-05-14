@@ -10,12 +10,16 @@ from torch.amp.grad_scaler import GradScaler
 from torch.utils.data import DataLoader
 import wandb
 
+from bachelors_thesis.data.load_ptbdata_new import (
+    AUGMENTED_LEADS,
+    LIMB_LEADS,
+    PRECORDIAL_LEADS,
+)
 from bachelors_thesis.data.preprocessing import resample
 from bachelors_thesis.logger import init_logger
 from bachelors_thesis.modeling.train import train
 from bachelors_thesis.registries.dataset_registry import get_dataset
 from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
-from bachelors_thesis.data.load_ptbdata_new import PRECORDIAL_LEADS, LIMB_LEADS, AUGMENTED_LEADS, ALL_LEADS
 
 # Enable cuDNN autotuner for performance optimization
 # This is useful for convolutional networks
@@ -25,6 +29,7 @@ from bachelors_thesis.data.load_ptbdata_new import PRECORDIAL_LEADS, LIMB_LEADS,
 
 lead_sets = {
     'precordial': PRECORDIAL_LEADS,
+    'II': PRECORDIAL_LEADS + ['II'],
     'limb': PRECORDIAL_LEADS + LIMB_LEADS,
     'augmented': PRECORDIAL_LEADS + AUGMENTED_LEADS,
     'all': PRECORDIAL_LEADS + LIMB_LEADS + AUGMENTED_LEADS
@@ -45,6 +50,32 @@ def _make_amp_objs(device: str, amp_dtype: str):
         return autocast(device, dtype=getattr(torch, amp_dtype))
 
     return scaler, autocast_ctx
+
+def fetch_checkpoint(cfg):
+    """
+    Fetch the checkpoint from the config.
+    """
+    checkpoint = OmegaConf.select(cfg, "run.starting_checkpoint")
+    if not checkpoint:
+        logger.info("No checkpoint provided. Starting from scratch.")
+        return None
+    
+    # Load checkpoint from wandb
+    if not cfg.wandb.enabled:
+        logger.warning("Wandb is not enabled. Cannot load checkpoint.")
+        return None
+
+    run_id, version = checkpoint.split(":")
+    api = wandb.Api()
+    run = api.run(f"{cfg.wandb.entity}/{cfg.wandb.project}/{run_id}")
+    run_name = run.name
+    artifact = api.artifact(f"{cfg.wandb.entity}/{cfg.wandb.project}/{run_name}:{version}")
+    artifact_dir = artifact.download()
+    checkpoint_path = artifact_dir + f"/{run_name}.pth"
+    state_dict = torch.load(checkpoint_path, map_location=cfg.run.device)
+    logger.info(f"Loaded checkpoint from {checkpoint_path}")
+
+    return state_dict
 
 @hydra.main(config_path="../config", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
@@ -110,8 +141,8 @@ def main(cfg: DictConfig):
     for preprocessor in cfg.preprocessor_group.preprocessors:
         logger.info(f"Applying preprocessor: {preprocessor._preprocessor_.strip('_')}...")
         preprocessor_func = get_preprocessor(preprocessor._preprocessor_)
-        train_data = preprocessor_func(train_data, sampling_rate=cfg.dataset.sampling_rate, **preprocessor)
-        val_data = preprocessor_func(val_data, sampling_rate=cfg.dataset.sampling_rate, **preprocessor)
+        train_data = preprocessor_func(train_data, sampling_rate=cfg.dataset.sampling_rate, logger=logger, **preprocessor)
+        val_data = preprocessor_func(val_data, sampling_rate=cfg.dataset.sampling_rate, logger=logger, **preprocessor)
 
     # 2. Convert to torch tensors
     train_data = torch.from_numpy(train_data).float()
@@ -162,7 +193,8 @@ def main(cfg: DictConfig):
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         scaler=scaler,
-        autocast=autocast_ctx
+        autocast=autocast_ctx,
+        state_dict=fetch_checkpoint(cfg)
     )
 
 if __name__ == "__main__":

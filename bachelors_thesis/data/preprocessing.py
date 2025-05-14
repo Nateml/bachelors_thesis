@@ -1,6 +1,6 @@
 from loguru import logger as log
 import numpy as np
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, medfilt
 from scipy.signal import resample as _resample
 
 
@@ -41,7 +41,7 @@ def bandpass(data, *, sampling_rate, order=4, low=0.4, high=40, **kwargs):
     else:
         raise ValueError(f"Unsupported data shape: {data.shape}. Expected 1D, 2D, or 3D array.")
 
-def highpass(data, *, sampling_rate, order=4, low=0.5, **kwargs):
+def highpass(data, *, sampling_rate, order=4, cutoff=0.5, logger=None, **kwargs):
     """
     Apply a butterworth highpass filter to signals.
 
@@ -52,7 +52,10 @@ def highpass(data, *, sampling_rate, order=4, low=0.5, **kwargs):
         - (N, T) for multiple signals
         - (N, T, C) for multiple signals with multiple channels
     """
-    b, a = butter(order, low, btype='highpass', fs=sampling_rate)
+    if logger:
+        logger.info(f"Applying highpass filter with {order} order and cutoff {cutoff} Hz")
+
+    b, a = butter(order, cutoff, btype='highpass', fs=sampling_rate)
 
     if data.ndim == 1:
         # Shape (T,)
@@ -76,6 +79,41 @@ def highpass(data, *, sampling_rate, order=4, low=0.5, **kwargs):
 
     else:
         raise ValueError(f"Unsupported data shape: {data.shape}. Expected 1D, 2D, or 3D array.")
+
+def median_filter(data, *, sampling_rate, kernel_ms1=200, kernel_ms2=600, **kwargs):
+    k1 = int(np.round(kernel_ms1 * sampling_rate / 1000.0))
+    # Make sure kernel size is odd
+    if k1 % 2 == 0:
+        k1 += 1
+    k2 = int(np.round(kernel_ms2 * sampling_rate / 1000.0))
+    if k2 % 2 == 0:
+        k2 += 1
+
+    if data.ndim == 1:
+        baseline1 = medfilt(data, kernel_size=k1)
+        baseline2 = medfilt(baseline1, kernel_size=k2)
+        filtered = data - baseline2
+        return filtered
+
+    elif data.ndim == 2:
+        # Shape (N, T)
+        return np.array([median_filter(sig, sampling_rate=sampling_rate) for sig in data])
+
+    elif data.ndim == 3:
+        # Shape (N, T, C)
+        N, T, C = data.shape
+
+        if C > T:
+            log.warning("Preprocessing warning: Number of channels is greater than number of samples." \
+            "Are you sure the data is in the right shape?")
+
+        reshaped = data.transpose(0, 2, 1).reshape(-1, T)
+        filtered = np.array([median_filter(sig, sampling_rate=sampling_rate) for sig in reshaped])
+        return filtered.reshape(N, C, T).transpose(0, 2, 1)
+
+    else:
+        raise ValueError(f"Unsupported data shape: {data.shape}. Expected 1D, 2D, or 3D array.")
+
 
 def z_score(data, **kwargs):
     """

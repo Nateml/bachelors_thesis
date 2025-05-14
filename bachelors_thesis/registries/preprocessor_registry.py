@@ -1,4 +1,4 @@
-from bachelors_thesis.data.preprocessing import bandpass, highpass
+from bachelors_thesis.data.preprocessing import bandpass, highpass, median_filter
 
 
 def get_preprocessor(name: str):
@@ -6,5 +6,7 @@ def get_preprocessor(name: str):
         return bandpass
     elif name == "highpass":
         return highpass
+    elif name == "median":
+        median_filter
     else:
         raise ValueError(f"Unknown preprocessor: {name}")
