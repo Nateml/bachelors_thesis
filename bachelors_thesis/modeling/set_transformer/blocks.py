@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class SetAttentionBlock(nn.Module):
-    def __init__(self, d, h, ffn_expansion=4, mha_dropout=0):
+    def __init__(self, d, h, ffn_expansion=4, mha_dropout=0, activation=nn.GELU()):
         """
         Args
         ----
@@ -17,7 +17,7 @@ class SetAttentionBlock(nn.Module):
         self.mha = nn.MultiheadAttention(d, h, batch_first=True, dropout=mha_dropout)
         self.ffn = nn.Sequential(
             nn.Linear(d, ffn_expansion*d),
-            nn.GELU(), # GELU activation function, not sure why this is used instead of ReLU
+            activation,
             nn.Linear(ffn_expansion*d, d)
         )
         self.layernorm1 = nn.LayerNorm(d)

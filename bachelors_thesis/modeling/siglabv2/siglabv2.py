@@ -1,13 +1,16 @@
 """
-SigLab: A Deep Learning Model for ECG Signal Localization using labelled leads
+SigLabV2: A Deep Learning Model for ECG Lead Identification
 """
 
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.modeling.set_transformer.blocks import SetAttentionBlock, InducedSetAttentionBlock
+from bachelors_thesis.modeling.set_transformer.blocks import (
+    SetAttentionBlock,
+)
+from bachelors_thesis.registries.activation_registry import get_activation
 from bachelors_thesis.registries.encoder_registry import get_encoder
 
 
@@ -21,6 +24,8 @@ class LocalEncoder(nn.Module):
 
         assert cfg.local_encoder.in_channels == 1, "Only 1 input channel is supported"
 
+        activation = get_activation(OmegaConf.select(cfg, 'encoder.activation', default='relu'))()
+
         # Construct layers from the configuration
         layers = []
         in_channels = cfg.local_encoder.in_channels
@@ -32,7 +37,7 @@ class LocalEncoder(nn.Module):
                     stride=layer_cfg.stride,
                     padding=layer_cfg.padding
                 ))
-            layers.append(nn.ReLU())
+            layers.append(activation)
             in_channels = layer_cfg.out_channels
 
         # Pooling Layer
@@ -41,7 +46,7 @@ class LocalEncoder(nn.Module):
         layers.append(nn.Flatten())
         # Fully Connected Layyer
         layers.append(nn.Linear(in_channels, cfg.feature_dim))
-        layers.append(nn.ReLU())
+        layers.append(activation)
 
         self.encoder = nn.Sequential(*layers)
 
@@ -70,9 +75,11 @@ class Classifier(nn.Module):
 
         self.input_size = cfg.classifier.in_size
 
+        activation = get_activation(OmegaConf.select(cfg, 'encoder.activation', default='relu'))()
+
         self.classifier = nn.Sequential(
             nn.Linear(self.input_size, cfg.classifier.layers[0].out_size),
-            nn.ReLU(),
+            activation,
             *[
                 layer
                 for layer_cfg in cfg.classifier.layers[1:-1]
@@ -141,7 +148,8 @@ class AttnBeliefUpdate(nn.Module):
         self.sab = SetAttentionBlock(
             cfg.feature_dim,
             cfg.sab.num_heads,
-            cfg.sab.ffn_expansion
+            cfg.sab.ffn_expansion,
+            activation = get_activation(OmegaConf.select(cfg, 'encoder.activation', default='gelu'))()
         )
 
         # classification head
@@ -178,6 +186,7 @@ class SigLabV2(nn.Module):
 
         # This used to be after the sab
         #self.init_head = Classifier(cfg)
+        # This is not being used but its here for backwards compatibility
         self.init_head = nn.Linear(cfg.feature_dim, cfg.num_classes)
 
         # --------2) Attention enriched features ---------
@@ -240,6 +249,52 @@ class SigLabV2(nn.Module):
         #return final_logits, logits
         return logits
 
+class BlindSigLabV2(nn.Module):
+    def __init__(self, cfg: DictConfig):
+        super().__init__()
+        self.feature_dim = cfg.feature_dim
+        self.c = cfg.num_classes
+
+        # --------1) Per-electrode encoder ---------------
+        self.encoder = get_encoder(cfg.encoder.name)(cfg)
+
+        # This used to be after the sab
+        #self.init_head = Classifier(cfg)
+        #self.init_head = nn.Linear(cfg.feature_dim, cfg.num_classes)
+
+        # --------3) L attention-refinement layers --------
+        #self.belief_layers = nn.ModuleList([
+            #AttnBeliefUpdate(cfg) for _ in range(cfg.num_belief_updates)
+        #])
+
+        # --------4) Classification head --------------
+        self.classifier = Classifier(cfg)
+
+        #self.alpha = nn.Parameter(torch.tensor(0.5))
+        #self.alpha = 0.5
+
+    def forward(self, signals):
+        """
+        signals: Tensor of shape (B, N, T),
+            where B is the batch size,
+            N is the number of leads,
+            and T is the length of the signal.
+        Returns:
+            lead_logits: tensor of shape (B, N, C)
+            initial_logits: tensor of shape (B, N, C)
+        """
+
+        B, N, T = signals.shape
+
+        # Process all electrode signals through the per-electrode local encoder
+        features = self.encoder(signals)  # (B, N, D)
+        _, _, D = features.shape
+
+        logits = self.classifier(features)  # (B, N, C)
+
+        #return final_logits, logits
+        return logits
+
 def focal_loss(
         logits,
         targets,
@@ -295,9 +350,7 @@ def loss_step(
     # Compute loss
     if cfg.loss.name == "cross-entropy":
         # Main loss
-        # I am only going to use the precordial leads for the loss because
-        # for this experiment I only care about precordial accuracy
-        losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(6)]
+        losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(N)]
         loss = torch.stack(losses).mean()
 
         # Loss for intermediate predictions

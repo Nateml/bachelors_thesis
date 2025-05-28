@@ -1,5 +1,5 @@
 import copy
-import sys
+from typing import Optional
 
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
@@ -25,7 +25,7 @@ def train_loop(model: nn.Module,
                loss_fn,
                cfg: DictConfig,
                epoch: int,
-               scaler: torch.cuda.amp.GradScaler = None,
+               scaler: Optional[torch.cuda.amp.GradScaler] = None,
                autocast: torch.cuda.amp.autocast = torch.enable_grad,
                scheduler: torch.optim.lr_scheduler._LRScheduler = None,
                ):

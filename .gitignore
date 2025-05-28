@@ -8,6 +8,13 @@
 !/data/interim/.gitkeep
 !/data/processed/.gitkeep
 
+# Figures
+/figures/*
+reports/figures/*
+notebooks/exploratory/figures/*
+notebooks/reports/figures/*
+
+
 # Mac OS-specific storage files
 .DS_Store
 

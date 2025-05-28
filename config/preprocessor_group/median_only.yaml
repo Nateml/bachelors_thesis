@@ -1,0 +1,3 @@
+defaults:
+  - /preprocessors: [median]
+  - _self_

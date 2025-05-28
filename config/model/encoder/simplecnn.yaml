@@ -7,11 +7,11 @@ name: simplecnn
 # strides: [1, 1, 1, 1, 1]
 # paddings: [5, 4, 3, 2, 1]
 
-in_channels: [1, 16, 32, 64, 128]
-out_channels: [16, 32, 64, 128, 256]
-kernel_sizes: [17, 11, 9, 7, 5]
+in_channels: [1, 32, 64, 128]
+out_channels: [32, 64, 128, 256]
+kernel_sizes: [17, 11, 7, 5]
 strides: [1, 1, 1, 1, 1]
-paddings: [8, 5, 4, 3, 2]
+paddings: [8, 5, 3, 2]
 
 light_dropout: 0
 heavy_dropout: 0.1

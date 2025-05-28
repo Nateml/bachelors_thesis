@@ -8,12 +8,14 @@ num_classes: 6
 num_belief_updates: 5
 
 sab:
+  activation: gelu
   num_heads: 8
   ffn_expansion: 4
   mha_dropout: 0
 
 classifier:
   in_size: ${model.feature_dim}
+  activation: relu
   layers:
     - out_size: 256
     - in_size: 256

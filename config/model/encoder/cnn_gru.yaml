@@ -3,13 +3,15 @@ name: cnngru
 num_inception_blocks: 2
 cnn_dropout: 0
 
+activation: relu
+
 gru:
-  num_layers: 1
+  num_layers: 2
   bidirectional: false
   attn_dim: 128
   hidden_dim: 128
   dropout: 0
-  final_dropout: 0
+  final_dropout: 0.1
 
 inception_block:
   bottleneck_channels: 64
@@ -21,7 +23,7 @@ inception_block:
     out_channels: 32
   branch3:
     kernel_size: 11
-    padding: 8
+    padding: 5
     out_channels: 32
   branch4:
     maxpool_size: 3

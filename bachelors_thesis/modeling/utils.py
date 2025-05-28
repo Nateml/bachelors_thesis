@@ -1,8 +1,8 @@
 import pathlib
 
+from omegaconf import OmegaConf
 import torch
 import wandb
-from omegaconf import OmegaConf
 
 
 class AverageMeter:

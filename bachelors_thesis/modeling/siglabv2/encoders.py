@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from bachelors_thesis.registries.activation_registry import get_activation
+
 
 class SimpleCNNEncoder(nn.Module):
 
@@ -422,6 +424,7 @@ class InceptionBlock(nn.Module):
         super().__init__()
 
         # Create the branches
+        self.activation = get_activation(OmegaConf.select(cfg, "encoder.inception_block.activation", default="relu"))()
 
         # Branch 1: 1x1 convolution
         self.branch1 = nn.Sequential(
@@ -435,7 +438,7 @@ class InceptionBlock(nn.Module):
             ),
             # Instance norm
             nn.BatchNorm1d(cfg.encoder.inception_block.branch1.out_channels),
-            nn.ReLU()
+            self.activation
         )
 
         # Branch 2: 5x1 convolution
@@ -448,7 +451,7 @@ class InceptionBlock(nn.Module):
                 padding=0
             ),
             nn.BatchNorm1d(bottleneck_channels),
-            nn.ReLU(),
+            self.activation,
             nn.Conv1d(
                 in_channels=bottleneck_channels,
                 out_channels=cfg.encoder.inception_block.branch2.out_channels,
@@ -457,7 +460,7 @@ class InceptionBlock(nn.Module):
                 padding=OmegaConf.select(cfg, "encoder.inception_block.branch2.padding", default=2)
             ),
             nn.BatchNorm1d(cfg.encoder.inception_block.branch2.out_channels),
-            nn.ReLU()
+            self.activation
         )
 
         # Branch 3: 11x1 convolution
@@ -470,7 +473,7 @@ class InceptionBlock(nn.Module):
                 padding=0
             ),
             nn.BatchNorm1d(bottleneck_channels),
-            nn.ReLU(),
+            self.activation,
             nn.Conv1d(
                 in_channels=bottleneck_channels,
                 out_channels=cfg.encoder.inception_block.branch3.out_channels,
@@ -479,7 +482,7 @@ class InceptionBlock(nn.Module):
                 padding=OmegaConf.select(cfg, "inception_block.branch3.padding", default=5)
             ),
             nn.BatchNorm1d(cfg.encoder.inception_block.branch3.out_channels),
-            nn.ReLU(),
+            self.activation
         )
 
         # Branch 4: Max pooling
@@ -495,7 +498,7 @@ class InceptionBlock(nn.Module):
                 padding=0
             ),
             nn.BatchNorm1d(cfg.encoder.inception_block.branch4.out_channels),
-            nn.ReLU()
+            self.activation
         )
 
     def forward(self, x):
@@ -700,6 +703,8 @@ class CNNGRUEncoder(nn.Module):
         self.gru_output_size = cfg.encoder.gru.hidden_dim * self.gru_num_directions
         self.feature_dim = cfg.feature_dim
 
+        self.activation = get_activation(OmegaConf.select(cfg, "encoder.activation", default="relu"))()
+
         # Create the encoder
         encoder_layers = []
         current_channels = 1
@@ -750,7 +755,7 @@ class CNNGRUEncoder(nn.Module):
         # Fully connected layer to project the GRU output to the desired feature dimension
         self.fc = nn.Sequential(
             nn.Linear(self.gru_output_size, self.feature_dim),
-            nn.ReLU(),
+            self.activation,
             nn.Dropout(OmegaConf.select(cfg, "encoder.gru.final_dropout", default=0.0))
         )
 
@@ -783,14 +788,5 @@ class CNNGRUEncoder(nn.Module):
 
         # Reshape back to (B, N, feature_dim)
         out = out.view(B, N, -1)
-
-        # Add the cnn output with the GRU output
-        # so that the cnn blocks receive enough gradient
-        #cnn_out = self.cnn_post_layers(cnn_out)  # (B * N, feature_dim)
-        # Reshape back to (B, N, feature_dim)
-        #cnn_out = cnn_out.view(B, N, -1)
-
-        #merged = out + torch.sigmoid(self.alpha) * cnn_out  # (B, N, feature_dim)
-        #merged = self.merge_norm(merged)
 
         return out

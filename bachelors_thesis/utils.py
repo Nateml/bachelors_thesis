@@ -39,16 +39,19 @@ def _plot_traces(
         sampling_rate: int, 
         title: str,
         predictions: Optional[np.ndarray] = None,
-        ax: Optional[plt.Axes] = None
+        ax: Optional[plt.Axes] = None,
+        spacing: float = 1.2,
+        dpi: int = 200,
+        width: Optional[int] = None
 ) -> plt.Axes:
     n_samples, n_ch = signal.shape
 
     if ax is None:
         fig_h = max(3, n_ch * 1.5)
-        _, ax = plt.subplots(figsize=(12, fig_h))
+        _, ax = plt.subplots(figsize=(width, fig_h), dpi=dpi)
 
     # Vertical spacing to avoid overlap
-    spacing = max(np.ptp(signal[:, i]) for i in range(n_ch)) * 1.2
+    spacing = max(np.ptp(signal[:, i]) for i in range(n_ch)) * spacing
 
     baselines = [(n_ch - 1 - i) * spacing for i in range(n_ch)]
 
@@ -87,7 +90,10 @@ def plot_ecg(
         sampling_rate: int =100,
         leads: List[str] = ["V1", "V2", "V3", "V4", "V5", "V6"],
         predictions: Optional[np.ndarray] = None,
-        ax: Optional[plt.Axes] = None
+        ax: Optional[plt.Axes] = None,
+        spacing: float = 1.2,
+        dpi: int = 200,
+        width: Optional[int] = None
 ) -> plt.Axes:
     """
     Plots the ECG signals for the given leads.
@@ -134,7 +140,10 @@ def plot_ecg(
         sampling_rate,
         f"ECG signals array | sr={sampling_rate} Hz",
         predictions=predictions,
-        ax=ax
+        ax=ax,
+        spacing=spacing,
+        dpi=dpi,
+        width=width
     )
 
 def confusion_matrix(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:

@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.registries.encoder_registry import get_encoder
 from bachelors_thesis.modeling.old.deepsets import DeepSetsContextEncoder
+from bachelors_thesis.registries.encoder_registry import get_encoder
 
 
 class Classifier(nn.Module):
