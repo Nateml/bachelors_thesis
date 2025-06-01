@@ -1,9 +1,8 @@
 from omegaconf import DictConfig
+from src.modeling.old.deepsets import DeepSetsContextEncoder
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from src.modeling.old.deepsets import DeepSetsContextEncoder
 
 
 class GruModel(nn.Module):

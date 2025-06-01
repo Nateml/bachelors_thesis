@@ -5,6 +5,7 @@ The results can either be saved to a file, or the performance can be printed
 to the console.
 """
 
+from collections import defaultdict
 from enum import Enum
 import os
 from pathlib import Path
@@ -16,7 +17,6 @@ from omegaconf import OmegaConf
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from collections import defaultdict
 import typer
 
 from src.data.load_ptbdata_new import ALL_LEADS, PRECORDIAL_LEADS

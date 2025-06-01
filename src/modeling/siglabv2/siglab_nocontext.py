@@ -1,11 +1,8 @@
-
-
 from omegaconf import DictConfig
+from src.registries.encoder_registry import get_encoder
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from src.registries.encoder_registry import get_encoder
 
 
 class Classifier(nn.Module):

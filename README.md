@@ -8,6 +8,18 @@ Trained using the PTB-XL database, the model achieved an overall lead-level accu
 
 To the authors' knowledge, this research presents the first model for signal-based lead identification in the 12-lead ECG, paving the way for continuous electrode localisation and truly imageless ECGI.
 
+# Installation
+
+The project dependencies are listed in `requirements.txt` and can be installed by running the following command:
+
+```
+> pip install -r requirements.txt
+```
+
+This **does not** contain PyTorch, which is required to use the models, due to different hardware requiring different versions (CPU vs CUDA). Please install PyTorch v2.6.0 by following the instructions [here](https://pytorch.org/get-started/previous-versions/).
+
+To avoid installing unnecessary packages, the ones which are required to run the Jupyter notebooks are added seperately in the file `requirements-nb.txt`. If you plan on running the notebooks, just pip install from this file.
+
 ## Data
 This thesis uses the PTB-XL database. Since the dataset is large, it is not included in this GitHub repo. In order to train or run inference, download the database directly from [PhysioNet](https://physionet.org/content/ptb-xl/). Alternatively, the following command can be used: `wget -r -N -c -np https://physionet.org/files/ptb-xl/1.0.3/`.
 

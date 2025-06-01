@@ -1,14 +1,13 @@
 import random
 
 import numpy as np
-import torch
-from torch.nn import functional as F
-from torch.utils.data import Dataset
-
 from src.data.load_ptbdata_new import (
     ALL_LEADS,
     PRECORDIAL_LEADS,
 )
+import torch
+from torch.nn import functional as F
+from torch.utils.data import Dataset
 
 
 class SigLabDataset(Dataset):

@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import wfdb
 
-
 PRECORDIAL_LEADS = [
     "V1",
     "V2",

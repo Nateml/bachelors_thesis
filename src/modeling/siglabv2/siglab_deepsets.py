@@ -1,11 +1,9 @@
-
 from omegaconf import DictConfig
+from src.modeling.old.deepsets import DeepSetsContextEncoder
+from src.registries.encoder_registry import get_encoder
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from src.modeling.old.deepsets import DeepSetsContextEncoder
-from src.registries.encoder_registry import get_encoder
 
 
 class Classifier(nn.Module):

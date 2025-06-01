@@ -1,9 +1,8 @@
 from omegaconf import DictConfig, OmegaConf
+from src.registries.activation_registry import get_activation
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from src.registries.activation_registry import get_activation
 
 
 class SimpleCNNEncoder(nn.Module):

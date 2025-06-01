@@ -1,17 +1,15 @@
 """
 SigLabV2: A Deep Learning Model for ECG Lead Identification
 """
-
 from omegaconf import DictConfig, OmegaConf
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
 from src.modeling.set_transformer.blocks import (
     SetAttentionBlock,
 )
 from src.registries.activation_registry import get_activation
 from src.registries.encoder_registry import get_encoder
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class LocalEncoder(nn.Module):

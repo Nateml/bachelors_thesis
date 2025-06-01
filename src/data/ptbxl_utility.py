@@ -2,10 +2,9 @@ import os
 from typing import List, Tuple
 
 import numpy as np
-import wfdb
-
 from src.config import RAW_DATA_DIR
 from src.data.load_ptbdata_new import PRECORDIAL_LEADS
+import wfdb
 
 
 def get_ecg_signals_from_file(
