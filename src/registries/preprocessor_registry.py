@@ -1,4 +1,4 @@
-from bachelors_thesis.data.preprocessing import bandpass, highpass, median_filter
+from src.data.preprocessing import bandpass, highpass, median_filter
 
 
 def get_preprocessor(name: str):

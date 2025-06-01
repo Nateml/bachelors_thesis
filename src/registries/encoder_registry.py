@@ -1,6 +1,6 @@
 from typing import Type
 
-from bachelors_thesis.modeling.siglabv2.encoders import (
+from src.modeling.siglabv2.encoders import (
     CNNGRUEncoder,
     GruAttentionEncoder,
     GruEncoder,

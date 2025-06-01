@@ -10,11 +10,11 @@ from torch.amp.grad_scaler import GradScaler
 from torch.utils.data import DataLoader
 import wandb
 
-from bachelors_thesis.data.preprocessing import resample
-from bachelors_thesis.logger import init_logger
-from bachelors_thesis.modeling.train import train
-from bachelors_thesis.registries.dataset_registry import get_dataset
-from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
+from src.data.preprocessing import resample
+from src.logger import init_logger
+from src.modeling.train import train
+from src.registries.dataset_registry import get_dataset
+from src.registries.preprocessor_registry import get_preprocessor
 
 # Enable cuDNN autotuner for performance optimization
 # This is useful for convolutional networks

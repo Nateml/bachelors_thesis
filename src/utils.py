@@ -8,7 +8,7 @@ from scipy.optimize import linear_sum_assignment
 import torch
 import torch.nn as nn
 
-from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
+from src.registries.preprocessor_registry import get_preprocessor
 
 PRECORDIAL_LEAD_NAMES = [
     "V1",

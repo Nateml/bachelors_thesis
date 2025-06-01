@@ -19,11 +19,11 @@ from tqdm import tqdm
 from collections import defaultdict
 import typer
 
-from bachelors_thesis.data.load_ptbdata_new import ALL_LEADS, PRECORDIAL_LEADS
-from bachelors_thesis.evaluation import lead_level_accuracy, set_level_accuracy
-from bachelors_thesis.modeling.datasets.siglab_dataset import SigLabDataset
-from bachelors_thesis.run import lead_sets
-from bachelors_thesis.utils import apply_preprocessors, confusion_matrix, hungarian_predictions
+from src.data.load_ptbdata_new import ALL_LEADS, PRECORDIAL_LEADS
+from src.evaluation import lead_level_accuracy, set_level_accuracy
+from src.modeling.datasets.siglab_dataset import SigLabDataset
+from src.run import lead_sets
+from src.utils import apply_preprocessors, confusion_matrix, hungarian_predictions
 
 # Get the directory of the current file
 current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -4,8 +4,8 @@ from typing import List, Tuple
 import numpy as np
 import wfdb
 
-from bachelors_thesis.config import RAW_DATA_DIR
-from bachelors_thesis.data.load_ptbdata_new import PRECORDIAL_LEADS
+from src.config import RAW_DATA_DIR
+from src.data.load_ptbdata_new import PRECORDIAL_LEADS
 
 
 def get_ecg_signals_from_file(

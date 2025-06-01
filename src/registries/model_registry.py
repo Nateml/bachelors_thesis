@@ -1,23 +1,23 @@
 from typing import Callable, Tuple, Type
 
-from bachelors_thesis.modeling.old.aura12 import AURA12
-from bachelors_thesis.modeling.old.aura12 import loss_step as aura12_loss_step
-from bachelors_thesis.modeling.old.cnngru import CNNGru
-from bachelors_thesis.modeling.old.cnngru import loss_step as cnngru_loss_step
-from bachelors_thesis.modeling.old.gru import GruModel
-from bachelors_thesis.modeling.old.gru import loss_step as gru_loss_step
-from bachelors_thesis.modeling.old.sigloc import SigLoc12, SigLocNolan
-from bachelors_thesis.modeling.old.sigloc import loss_step as sigloc_loss_step
-from bachelors_thesis.modeling.siglabv2.siglab_deepsets import SigLabDeepsets
-from bachelors_thesis.modeling.siglabv2.siglab_deepsets import (
+from src.modeling.old.aura12 import AURA12
+from src.modeling.old.aura12 import loss_step as aura12_loss_step
+from src.modeling.old.cnngru import CNNGru
+from src.modeling.old.cnngru import loss_step as cnngru_loss_step
+from src.modeling.old.gru import GruModel
+from src.modeling.old.gru import loss_step as gru_loss_step
+from src.modeling.old.sigloc import SigLoc12, SigLocNolan
+from src.modeling.old.sigloc import loss_step as sigloc_loss_step
+from src.modeling.siglabv2.siglab_deepsets import SigLabDeepsets
+from src.modeling.siglabv2.siglab_deepsets import (
     loss_step as siglab_deepsets_loss_step,
 )
-from bachelors_thesis.modeling.siglabv2.siglab_nocontext import SigLabNoContext
-from bachelors_thesis.modeling.siglabv2.siglab_nocontext import (
+from src.modeling.siglabv2.siglab_nocontext import SigLabNoContext
+from src.modeling.siglabv2.siglab_nocontext import (
     loss_step as siglab_nocontext_loss_step,
 )
-from bachelors_thesis.modeling.siglabv2.siglabv2 import SigLabV2
-from bachelors_thesis.modeling.siglabv2.siglabv2 import loss_step as siglabv2_loss_step
+from src.modeling.siglabv2.siglabv2 import SigLabV2
+from src.modeling.siglabv2.siglabv2 import loss_step as siglabv2_loss_step
 
 
 def get_model(model_name: str) -> Tuple[Type, Callable]:

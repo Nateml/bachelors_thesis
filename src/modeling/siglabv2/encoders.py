@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.registries.activation_registry import get_activation
+from src.registries.activation_registry import get_activation
 
 
 class SimpleCNNEncoder(nn.Module):

@@ -5,7 +5,7 @@ import torch
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
-from bachelors_thesis.data.load_ptbdata_new import (
+from src.data.load_ptbdata_new import (
     ALL_LEADS,
     PRECORDIAL_LEADS,
 )

@@ -1,11 +1,11 @@
 
+
 from omegaconf import DictConfig
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.modeling.old.deepsets import DeepSetsContextEncoder
-from bachelors_thesis.registries.encoder_registry import get_encoder
+from src.registries.encoder_registry import get_encoder
 
 
 class Classifier(nn.Module):
@@ -33,7 +33,7 @@ class Classifier(nn.Module):
         """
         return self.classifier(z)
 
-class SigLabDeepsets(nn.Module):
+class SigLabNoContext(nn.Module):
     """Main SigLabDeepsets module"""
 
     def __init__(self, cfg: DictConfig):
@@ -44,20 +44,7 @@ class SigLabDeepsets(nn.Module):
         # --------1) Per-electrode encoder ---------------
         self.encoder = get_encoder(cfg.encoder.name)(cfg)
 
-        # This used to be after the sab
-        #self.init_head = Classifier(cfg)
-        self.init_head = nn.Linear(cfg.feature_dim, cfg.num_classes)
-
-        # --------2) Deepsets ---------
-        self.deepsets = DeepSetsContextEncoder(
-            input_size=cfg.feature_dim,
-            output_size=cfg.feature_dim,
-            hidden_dim=cfg.deepsets.hidden_dim,
-            phi_layers=cfg.deepsets.phi_layers,
-            rho_layers=cfg.deepsets.rho_layers
-        )
-
-        # --------4) Classification head --------------
+        # --------2) Classification head --------------
         self.classifier = Classifier(cfg)
 
     def forward(self, signals):
@@ -74,14 +61,8 @@ class SigLabDeepsets(nn.Module):
         B, N, T = signals.shape
 
         # Process all electrode signals through the per-electrode local encoder
-        local_features = self.encoder(signals)  # (B, N, D)
-        _, _, D = local_features.shape
-
-        # Deepsets -> (B, D)
-        context = self.deepsets(local_features, mask=None)
-
-        # Concat the two representations
-        features = torch.cat([local_features, context.unsqueeze(1).expand(-1, N, -1)], dim=-1)  # (B, N, 2*D)
+        features = self.encoder(signals)  # (B, N, D)
+        _, _, D = features.shape
 
         logits = self.classifier(features)  # (B, N, C)
 

@@ -11,11 +11,11 @@ from loguru import logger
 import numpy as np
 import typer
 
-from bachelors_thesis.config import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
-from bachelors_thesis.data import load_ptbdata_new as load_ptbdata
+from src.config import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
+from src.data import load_ptbdata_new as load_ptbdata
 
 # from bachelors_thesis.data import load_ptbdata
-from bachelors_thesis.data import split_ptbxl
+from src.data import split_ptbxl
 
 app = typer.Typer()
 
@@ -30,15 +30,15 @@ class Dataset(str, Enum):
 @app.command()
 def main(
     dataset: Dataset = typer.Option(
-        ...,
+        Dataset.ptbxl100all,
         help="Which dataset to process",
-        prompt=True,
+        prompt=False,
         case_sensitive=False,
         ),
     only_precordial_leads: bool = typer.Option(
-        True,
+        False,
         help="Whether to only use precordial leads",
-        prompt=True,
+        prompt=False,
         case_sensitive=False
         ),
 ):

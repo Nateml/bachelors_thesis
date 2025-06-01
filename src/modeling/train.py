@@ -9,14 +9,14 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 import wandb
 
-from bachelors_thesis.logger import (
+from src.logger import (
     create_progress_bar,
     log_epoch_summary,
     update_progress_bar,
 )
-from bachelors_thesis.modeling.utils import AverageMeterDict, log_to_wandb, save_checkpoint
-from bachelors_thesis.registries.model_registry import get_model
-from bachelors_thesis.registries.scheduler_registry import get_scheduler
+from src.modeling.utils import AverageMeterDict, log_to_wandb, save_checkpoint
+from src.registries.model_registry import get_model
+from src.registries.scheduler_registry import get_scheduler
 
 
 def train_loop(model: nn.Module,
@@ -113,26 +113,6 @@ def train(
     autocast: torch.cuda.amp.autocast = torch.enable_grad,
     state_dict: dict = None
 ):
-    """
-    Trains the AURA12 model on the provided dataloader.
-
-    model: AURA12 model instance
-    train_dataloader: DataLoader for training data
-
-    epochs: Number of training epochs
-    temperature: Temperature parameter for NT-Xent loss
-    lambda_clf: Weight for the classification loss, (total loss is calculated
-        as contrastive_loss + lambda_clf * classification_loss)
-    device: Device to use for training (e.g., 'cuda' or 'cpu')
-    save_path: Path to save the model checkpoint (optional)
-    val_dataloader: DataLoader for validation data (optional). If provided,
-            the model will be evaluated on this data after each epoch and
-            the results will be printed.
-
-    Returns:
-        model: Trained AURA12 model
-    """
-
     try:
         # 1. Load model from registry
         model_type, loss_fn = get_model(cfg.model.model_name)

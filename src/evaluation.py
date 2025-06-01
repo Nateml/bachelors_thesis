@@ -50,7 +50,7 @@ def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = Non
             # Bootstrap resampling
             accs = np.zeros(R)
             for i in range(R):
-                indices = np.random.choice(total, size=total, replace=True)
+                indices = np.random.choice(correct.shape[0], size=correct.shape[0], replace=True)
                 sampled_correct = correct[indices]
                 accs[i] = sampled_correct.mean()
             acc = np.mean(accs)
@@ -58,7 +58,7 @@ def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = Non
             upper = np.percentile(accs, 100 * (1 - alpha / 2))
 
         elif method == 'wilson':
-            lower, upper = proportion_confint(num_correct, total, alpha=alpha, method='wilson')
+            lower, upper = proportion_confint(num_correct, correct.shape[0], alpha=alpha, method='wilson')
 
     return (acc, lower, upper) if return_ci else (acc, None, None)
 

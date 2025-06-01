@@ -1,5 +1,5 @@
-from bachelors_thesis.modeling.datasets.aura12_dataset import AURA12Dataset
-from bachelors_thesis.modeling.datasets.siglab_dataset import SigLabDataset
+from src.modeling.datasets.aura12_dataset import AURA12Dataset
+from src.modeling.datasets.siglab_dataset import SigLabDataset
 
 
 def get_dataset(cfg):

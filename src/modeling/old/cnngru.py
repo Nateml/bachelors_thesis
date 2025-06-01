@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from bachelors_thesis.modeling.old.deepsets import DeepSetsContextEncoder
+from src.modeling.old.deepsets import DeepSetsContextEncoder
 
 
 class CNNBlock(nn.Module):
