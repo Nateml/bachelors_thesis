@@ -25,6 +25,7 @@ This thesis uses the PTB-XL database. Since the dataset is large, it is not incl
 
 Extract the files into `data/raw/ptb-xl/`. The directory should now look like this:
 
+```
 ├── data/
     └── raw/
         └── ptb-xl/
@@ -33,6 +34,7 @@ Extract the files into `data/raw/ptb-xl/`. The directory should now look like th
             └── ptbxl_database.csv
             └── scp_statements.csv
             └── ...
+```
 
 Once the raw PTB-XL data is ready, the `dataset.py` script can be used to process the data:
 
