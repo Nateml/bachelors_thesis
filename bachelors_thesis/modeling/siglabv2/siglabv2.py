@@ -350,7 +350,7 @@ def loss_step(
     # Compute loss
     if cfg.loss.name == "cross-entropy":
         # Main loss
-        losses = [F.cross_entropy(logits[:,i], targets[:,i]) for i in range(N)]
+        losses = [F.cross_entropy(logits[:, i], targets[:, i]) for i in range(6)]  #TODO: change 6 back to N
         loss = torch.stack(losses).mean()
 
         # Loss for intermediate predictions

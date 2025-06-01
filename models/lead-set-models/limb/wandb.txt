@@ -1,0 +1,2 @@
+WandB Run ID: qawus9eh
+Artifact Version: v24

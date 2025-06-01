@@ -1,0 +1,122 @@
+run:
+  name: aVF
+  seed: 42
+  leads: aVF
+  device: cuda
+  epochs: 25
+  comment: baseline
+  exp_num: 103
+  log_file: logs/103_siglabv2_aVF.log
+  patience: 10
+  amp_dtype: float16
+  log_level: info
+  min_delta: 1.0e-05
+  batch_size: 38
+  checkpoint: true
+  checkpoint_path: checkpoints/103_siglabv2_aVF
+  experiment_name: 103_siglabv2_aVF
+loss:
+  name: cross-entropy
+  description: Cross-entropy loss function
+model:
+  sab:
+    num_heads: 8
+    activation: gelu
+    mha_dropout: 0
+    ffn_expansion: 4
+  encoder:
+    gru:
+      dropout: 0
+      attn_dim: 128
+      hidden_dim: 128
+      num_layers: 2
+      bidirectional: false
+      final_dropout: 0.1
+    name: cnngru
+    activation: relu
+    cnn_dropout: 0
+    inception_block:
+      branch1:
+        out_channels: 32
+      branch2:
+        padding: 2
+        kernel_size: 5
+        out_channels: 32
+      branch3:
+        padding: 5
+        kernel_size: 11
+        out_channels: 32
+      branch4:
+        maxpool_size: 3
+        out_channels: 32
+      bottleneck_channels: 64
+    num_inception_blocks: 2
+  classifier:
+    layers:
+    - out_size: 256
+    - in_size: 256
+      out_size: 128
+    - in_size: 128
+    in_size: 128
+    activation: relu
+  model_name: siglabv2
+  feature_dim: 128
+  num_classes: 7
+  signal_length: 1000
+  num_belief_updates: 5
+wandb:
+  tags:
+  - hydra
+  - experiment
+  group: null
+  notes: baseline
+  entity: nateml-maastricht-university
+  enabled: true
+  project: bachelors-thesis
+  log_artifacts: true
+augment:
+  augment: true
+  augment_types:
+    noise:
+      noise: true
+      noise_type: gaussian
+      noise_std_low: 0.001
+      noise_std_high: 0.015
+    random_crop:
+      random_crop: false
+      crop_size_low: 0.25
+      crop_size_high: 1
+  augment_chance: 0.5
+  augment_choice_strategy: random
+  augment_choice_strategy_params:
+    augment_types:
+    - noise
+    - random_crop
+    num_augmentations: 2
+    augment_type_weights:
+    - 1
+    - 0
+    num_augmentations_per_sample: 1
+dataset:
+  name: ptbxl100all
+  path: data/processed/ptbxl100all/
+  description: PTB-XL, 100Hz, All Heartbeats
+  sampling_rate: 100
+  only_precordial: false
+run_name: siglabv2_ptbxl100all
+optimizer:
+  lr: 0.0007
+  name: adam
+  weight_decay: 0.0001
+scheduler:
+  name: cosine_annealing
+  params:
+    T_max: 30
+    eta_min: 1.0e-07
+    verbose: deprecated
+    last_epoch: -1
+preprocessor_group:
+  preprocessors:
+  - order: 4
+    cutoff: 0.5
+    _preprocessor_: highpass

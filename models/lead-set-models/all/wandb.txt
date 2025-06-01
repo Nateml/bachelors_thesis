@@ -1,0 +1,2 @@
+WandB Run ID: 2sp92xaw
+Artifact Version: v20

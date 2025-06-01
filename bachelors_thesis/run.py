@@ -30,6 +30,10 @@ from bachelors_thesis.registries.preprocessor_registry import get_preprocessor
 lead_sets = {
     'precordial': PRECORDIAL_LEADS,
     'II': PRECORDIAL_LEADS + ['II'],
+    'I': PRECORDIAL_LEADS + ['I'],
+    'III': PRECORDIAL_LEADS + ['III'],
+    'aVF': PRECORDIAL_LEADS + ['aVF'],
+    'I-aVF': PRECORDIAL_LEADS + ['I', 'aVF'],
     'limb': PRECORDIAL_LEADS + LIMB_LEADS,
     'augmented': PRECORDIAL_LEADS + AUGMENTED_LEADS,
     'all': PRECORDIAL_LEADS + LIMB_LEADS + AUGMENTED_LEADS

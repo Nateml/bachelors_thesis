@@ -1,0 +1,2 @@
+WandB Run ID: 736ha4nl
+Artifact Version: v21

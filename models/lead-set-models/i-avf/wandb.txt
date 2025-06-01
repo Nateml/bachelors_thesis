@@ -1,0 +1,2 @@
+WandB Run ID: u8k98a00
+Artifact Version: v20

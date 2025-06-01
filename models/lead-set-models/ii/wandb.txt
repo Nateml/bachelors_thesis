@@ -1,0 +1,2 @@
+WandB Run ID: y79dz973
+Artifact Version: latest

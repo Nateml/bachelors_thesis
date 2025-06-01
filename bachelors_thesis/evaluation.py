@@ -4,9 +4,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from statsmodels.stats.proportion import proportion_confint
 
 
-def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None):
+def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None, return_ci: bool = False, alpha: float = 0.05, method='bootstrap', R=1000):
     assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
     assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
 
@@ -39,11 +40,30 @@ def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = Non
     assert targets.shape == (num_samples, num_classes), "Targets must have the same shape as the first two dimensions of logits."
 
     correct: np.ndarray = predictions == targets
-    acc = correct.mean()
-    return acc
+    num_correct: np.ndarray = correct.sum()
+    total: int = correct.flatten().shape[0]
+
+    acc = num_correct / total
+
+    if return_ci:
+        if method == 'bootstrap':
+            # Bootstrap resampling
+            accs = np.zeros(R)
+            for i in range(R):
+                indices = np.random.choice(total, size=total, replace=True)
+                sampled_correct = correct[indices]
+                accs[i] = sampled_correct.mean()
+            acc = np.mean(accs)
+            lower = np.percentile(accs, 100 * alpha / 2)
+            upper = np.percentile(accs, 100 * (1 - alpha / 2))
+
+        elif method == 'wilson':
+            lower, upper = proportion_confint(num_correct, total, alpha=alpha, method='wilson')
+
+    return (acc, lower, upper) if return_ci else (acc, None, None)
 
 
-def set_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None):
+def set_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None, return_ci: bool = False, alpha: float = 0.05, method='wilson', R=1000):
     assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
     assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
 
@@ -75,8 +95,102 @@ def set_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None
 
     assert targets.shape == (num_samples, num_classes), "Targets must have the same shape as the first two dimensions of logits."
 
-    acc = np.mean(np.all(predictions == targets, axis=1))
-    return acc
+    correct = np.all(predictions == targets, axis=1)
+    num_correct = correct.sum()
+    total = correct.shape[0]
+    acc = num_correct / total
+
+    if return_ci:
+        if method == 'bootstrap':
+            # Bootstrap resampling
+            accs = np.zeros(R)
+            for i in range(R):
+                indices = np.random.choice(total, size=total, replace=True)
+                sampled_correct = correct[indices]
+                accs[i] = sampled_correct.mean()
+            acc = np.mean(accs)
+            lower = np.percentile(accs, 100 * alpha / 2)
+            upper = np.percentile(accs, 100 * (1 - alpha / 2))
+
+        elif method == 'wilson':
+            lower, upper = proportion_confint(num_correct, total, alpha=alpha, method='wilson')
+
+    return (acc, lower, upper) if return_ci else (acc, None, None)
+
+
+def bootstrap_lead_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None, R=1000, alpha=0.05):
+    """
+    Calculates a confidence interval for lead accuracy using bootstrap resampling.
+
+    Args
+    ----
+    predictions : np.ndarray, optional
+        Predicted labels for each sample, shape (N, K) where N is the number of ECG samples and K is the number of leads.
+    logits : np.ndarray, optional
+        Logits from the model, shape (N, K, C) where N is the number of ECG samples, K is the number of leads, and C is the number of classes.
+    targets : np.ndarray, optional
+        True labels for each sample, shape (N, K) where N is the number of ECG samples and K is the number of leads.
+    R : int, optional
+        Number of bootstrap resamples to perform. Default is 1000.
+    alpha : float, optional
+        Significance level for the confidence interval. Default is 0.05.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - mean_accuracy: float, the mean accuracy across all bootstrap samples.
+        - lower_bound: float, the lower bound of the 95% confidence interval.
+        - upper_bound: float, the upper bound of the 95% confidence interval.
+    """
+    assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
+    assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
+
+    num_samples = logits.shape[0] if logits is not None else predictions.shape[0]
+    num_classes = logits.shape[1] if logits is not None else predictions.shape[1]
+
+    if targets is None:
+        targets = np.broadcast_to(np.arange(num_classes), (num_samples, num_classes))
+
+    assert targets.shape == (num_samples, num_classes), "Targets must have the same shape as the first two dimensions of logits."
+
+    if predictions is None:
+        # -------------------------------
+        # Compute predictions from logits
+        # -------------------------------
+        assert logits.ndim == 3, "Logits must be 3D."
+        #assert logits.shape[1] == logits.shape[2], "Last two dimensions of logits must be square."
+
+        predictions: np.ndarray = logits.argmax(axis=2)  # (N, C)
+
+    # ------------------------------------
+    # Calculate accuracy using predictions
+    # ------------------------------------
+    assert predictions.ndim == 2, "Predictions must be 2D."
+
+    # predictions is (N, C) and targets is (N, C)
+    if targets is None:
+        targets = np.broadcast_to(np.arange(num_classes), (num_samples, num_classes))
+
+    assert targets.shape == (num_samples, num_classes), "Targets must have the same shape as the first two dimensions of logits."
+
+    # Bootstrap resampling
+    accs = np.zeros(R)
+    for i in range(R):
+        indices = np.random.choice(num_samples, size=num_samples, replace=True)
+        sampled_predictions = predictions[indices]
+        sampled_targets = targets[indices]
+        
+        # Calculate accuracy for the bootstrap sample
+        correct: np.ndarray = sampled_predictions == sampled_targets
+        accs[i] = correct.mean()
+
+    # Calculate mean and confidence intervals
+    mean_accuracy = np.mean(accs)
+    lower_bound = np.percentile(accs, 100 * alpha / 2)
+    upper_bound = np.percentile(accs, 100 * (1 - alpha / 2))
+
+    return mean_accuracy, lower_bound, upper_bound
 
 def pretty_code_density_plot(code_densities          : Counter,
                              miscl_code_densities    : Counter,

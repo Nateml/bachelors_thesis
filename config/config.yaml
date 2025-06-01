@@ -25,6 +25,6 @@ run:
   log_file: logs/${run.experiment_name}.log
   amp_dtype: float16 # Data type for AMP (Automatic Mixed Precision)
   seed: 42
-  leads: precordial  # Options: precordial, limb, augmented, all
+  leads: precordial  # Options: precordial, limb, augmented, all, II, I-aVF
 
 run_name: ${model.model_name}_${dataset.name}
