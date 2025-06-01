@@ -9,14 +9,28 @@ Trained using the PTB-XL database, the model achieved an overall lead-level accu
 To the authors' knowledge, this research presents the first model for signal-based lead identification in the 12-lead ECG, paving the way for continuous electrode localisation and truly imageless ECGI.
 
 ## Data
-This thesis uses the [PTB-XL dataset](https://physionet.org/content/ptb-xl/1.0.3/). Since the dataset is large, it is not included in this GitHub repo. It will be downloaded automatically if it is not detected in the `data/raw/` directory when running:
+This thesis uses the PTB-XL database. Since the dataset is large, it is not included in this GitHub repo. In order to train or run inference, download the database directly from [PhysioNet](https://physionet.org/content/ptb-xl/). Alternatively, the following command can be used: `wget -r -N -c -np https://physionet.org/files/ptb-xl/1.0.3/`.
+
+Extract the files into `data/raw/ptb-xl/`. The directory should now look like this:
+
+├── data/
+    └── raw/
+        └── ptb-xl/
+            └── records100/
+            └── records500/
+            └── ptbxl_database.csv
+            └── scp_statements.csv
+            └── ...
+
+Once the raw PTB-XL data is ready, the `dataset.py` script can be used to process the data:
+
 ```
 > python src/dataset.py
 ```
 
-The `dataset.py` script, by default, will (download and) process the 100Hz samples of the PTB-XL dataset. Additional options can be found by executing `> python src/dataset.py --help`.
+The `dataset.py` script, by default, will process the 100Hz samples of the PTB-XL dataset. Additional options can be found by executing `> python src/dataset.py --help`.
 
-The data should now be stored in `data/processed/ptbxl100all/all/`.
+The processed data should now be stored in `data/processed/ptbxl100all/all/`.
 
 ## Training 
 
