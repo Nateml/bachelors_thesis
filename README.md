@@ -20,6 +20,8 @@ This **does not** contain PyTorch, which is required to use the models, due to d
 
 To avoid installing unnecessary packages, the ones which are required to run the Jupyter notebooks are added seperately in the file `requirements-nb.txt`. If you plan on running the notebooks, just pip install from this file.
 
+The code for this project was developed using Python 3.10.6. Different versions of Python may (or may not...) cause compatability issues.
+
 ## Data
 This thesis uses the PTB-XL database. Since the dataset is large, it is not included in this GitHub repo. In order to train or run inference, download the database directly from [PhysioNet](https://physionet.org/content/ptb-xl/). Alternatively, the following command can be used: `wget -r -N -c -np https://physionet.org/files/ptb-xl/1.0.3/`.
 
