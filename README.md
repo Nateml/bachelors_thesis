@@ -59,8 +59,10 @@ All the configuration options can be defined in the `config/config.yaml` file, a
 All the parameters in the configuration files can also be overriden via the command-line:
 
 ```
-> python src/run.py run.exp_num="101" run.name="descriptive-name" run.optimiser.lr=1e-4
+> python src/run.py run.exp_num="101" run.name="descriptive-name" run.device=cuda
 ```
+
+If you do not have a device with CUDA capabilities, override the `run.device` argument with `cpu`. WARNING: training on CPU is *incredibly* slow.
 
 The resulting model will be stored in the `checkpoints` directory.
 
