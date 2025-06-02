@@ -82,11 +82,9 @@ If you would just like to run inference with the model, then the `inference.py` 
 │   ├── processed      <- Processed data for the models to use
 │   └── raw            <- Where the downloaded PTB-XL data goes
 │
-├── docs               <- Documentation (MkDocs)
-│
 ├── models             <- Trained and serialised models
 │
-├── checkpoint         <- Where the output of training a new model goes
+├── checkpoints        <- Where the output of training a new model goes
 │
 ├── notebooks          <- Jupyter notebooks.
 │   ├── exploratory    <- "Exploratory" (messy) notebooks
@@ -100,11 +98,11 @@ If you would just like to run inference with the model, then the `inference.py` 
 │
 └── src                <- Source code
     │
-    ├── dataset.py              <- Script to download and process PTB-XL data
+    ├── dataset.py     <- Script to download and process PTB-XL data
     │
-    ├── run.py                  <- Entry script for training the model
+    ├── run.py         <- Entry script for training the model
     │
-    └── modeling                <- Code related to the pytorch models
+    └── modeling       <- Code related to the pytorch models
 ```
 
 --------
