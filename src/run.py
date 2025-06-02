@@ -1,3 +1,5 @@
+# Description: Main entry point for training a model.
+
 import sys
 
 import hydra
@@ -10,7 +12,7 @@ from torch.amp.grad_scaler import GradScaler
 from torch.utils.data import DataLoader
 import wandb
 
-from src.data.load_ptbdata_new import (
+from src.data.load_ptbdata import (
     AUGMENTED_LEADS,
     LIMB_LEADS,
     PRECORDIAL_LEADS,
@@ -122,19 +124,6 @@ def main(cfg: DictConfig):
             tags=cfg.wandb.tags,
             group=cfg.wandb.group
         )
-
-        # Log dataset as a W&B artifact
-        #dataset_artifact = wandb.Artifact(
-        #    name=f"{cfg.dataset.name}_dataset",
-        #    type="dataset",
-        #    metadata={
-        #        "description": cfg.dataset.description,
-        #        "path": cfg.dataset.path,
-        #        "sampling_rate": cfg.dataset.sampling_rate
-        #    }
-        #)
-        #dataset_artifact.add_dir(cfg.dataset.path)
-        #wandb.log_artifact(dataset_artifact)
 
     if OmegaConf.select(cfg, "dataset.resampled_rate"):
         logger.info(f"Resampling data to {cfg.dataset.resampled_rate} Hz...")

@@ -1,4 +1,4 @@
-enabled: true
+enabled: false
 project: bachelors-thesis
 entity: nateml-maastricht-university
 tags: ["hydra", "experiment"]

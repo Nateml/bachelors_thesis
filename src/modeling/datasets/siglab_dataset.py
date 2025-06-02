@@ -1,7 +1,7 @@
 import random
 
 import numpy as np
-from src.data.load_ptbdata_new import (
+from src.data.load_ptbdata import (
     ALL_LEADS,
     PRECORDIAL_LEADS,
 )

@@ -1,3 +1,5 @@
+# I don't really use this file, but there are a few cases where I do
+# so I will just keep it for now
 from pathlib import Path
 
 from dotenv import load_dotenv

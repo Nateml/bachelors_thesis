@@ -348,14 +348,8 @@ def loss_step(
     # Compute loss
     if cfg.loss.name == "cross-entropy":
         # Main loss
-        losses = [F.cross_entropy(logits[:, i], targets[:, i]) for i in range(6)]  #TODO: change 6 back to N
+        losses = [F.cross_entropy(logits[:, i], targets[:, i]) for i in range(N)]
         loss = torch.stack(losses).mean()
-
-        # Loss for intermediate predictions
-        #init_loss = F.cross_entropy(inter_logits, targets, reduction='mean')
-        #init_losses = [F.cross_entropy(inter_logits[:,i], targets[:,i]) for i in range(N)]
-        #init_loss = torch.stack(init_losses).mean()
-        #loss = loss + 0.2 * init_loss
 
     elif cfg.loss.name == "focal-loss":
         loss = focal_loss(logits,
@@ -364,14 +358,6 @@ def loss_step(
                         gamma=cfg.loss.gamma,
                         reduction=cfg.loss.reduction
                         )
-        #init_loss = focal_loss(inter_logits,
-        #                targets,
-        #                alpha=cfg.loss.alpha,
-        #                gamma=cfg.loss.gamma,
-        #                reduction=cfg.loss.reduction
-        #                )
-        #loss = loss + 0.2 * init_loss
-
     else:
         raise ValueError(f"Unknown loss function: {cfg.loss.name}")
 

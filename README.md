@@ -62,6 +62,8 @@ All the parameters in the configuration files can also be overriden via the comm
 > python src/run.py run.exp_num="101" run.name="descriptive-name" run.optimiser.lr=1e-4
 ```
 
+The resulting model will be stored in the `checkpoints` directory.
+
 ## Inference
 
 If you would just like to run inference with the model, then the `inference.py` script does the job.
@@ -80,7 +82,9 @@ If you would just like to run inference with the model, then the `inference.py` 
 │
 ├── docs               <- Documentation (MkDocs)
 │
-├── models             <- The trained and serialised models
+├── models             <- Trained and serialised models
+│
+├── checkpoint         <- Where the output of training a new model goes
 │
 ├── notebooks          <- Jupyter notebooks.
 │   ├── exploratory    <- "Exploratory" (messy) notebooks

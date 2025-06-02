@@ -210,7 +210,8 @@ notebooks/*/wandb/
 artifacts/
 
 # Checkpoints
-/checkpoints/
+checkpoints/*
+!checkpoints/.gitkeep
 
 # Loguru
 /logs

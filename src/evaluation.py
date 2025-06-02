@@ -1,3 +1,5 @@
+# Description: Contains some functions for evaluation model performance.
+
 from collections import Counter
 from pathlib import Path
 
@@ -8,6 +10,12 @@ from statsmodels.stats.proportion import proportion_confint
 
 
 def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None, return_ci: bool = False, alpha: float = 0.05, method='bootstrap', R=1000):
+    """
+    Calculates the lead level accuracy from predictions or logits.
+
+    If `return_ci` is True, it also returns a confidence interval for the accuracy using the provided method.
+    `method` can be 'bootstrap' or 'wilson'.
+    """
     assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
     assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
 
@@ -24,7 +32,6 @@ def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = Non
         # Compute predictions from logits
         # -------------------------------
         assert logits.ndim == 3, "Logits must be 3D."
-        #assert logits.shape[1] == logits.shape[2], "Last two dimensions of logits must be square."
 
         predictions: np.ndarray = logits.argmax(axis=2)  # (N, C)
 
@@ -64,6 +71,12 @@ def lead_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = Non
 
 
 def set_level_accuracy(predictions: np.ndarray = None, logits: np.ndarray = None, targets: np.ndarray = None, return_ci: bool = False, alpha: float = 0.05, method='wilson', R=1000):
+    """
+    Calculates the setaccuracy from predictions or logits.
+
+    If `return_ci` is True, it also returns a confidence interval for the accuracy using the provided method.
+    `method` can be 'bootstrap' or 'wilson'.
+    """
     assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
     assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
 
@@ -122,26 +135,7 @@ def bootstrap_lead_accuracy(predictions: np.ndarray = None, logits: np.ndarray =
     """
     Calculates a confidence interval for lead accuracy using bootstrap resampling.
 
-    Args
-    ----
-    predictions : np.ndarray, optional
-        Predicted labels for each sample, shape (N, K) where N is the number of ECG samples and K is the number of leads.
-    logits : np.ndarray, optional
-        Logits from the model, shape (N, K, C) where N is the number of ECG samples, K is the number of leads, and C is the number of classes.
-    targets : np.ndarray, optional
-        True labels for each sample, shape (N, K) where N is the number of ECG samples and K is the number of leads.
-    R : int, optional
-        Number of bootstrap resamples to perform. Default is 1000.
-    alpha : float, optional
-        Significance level for the confidence interval. Default is 0.05.
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - mean_accuracy: float, the mean accuracy across all bootstrap samples.
-        - lower_bound: float, the lower bound of the 95% confidence interval.
-        - upper_bound: float, the upper bound of the 95% confidence interval.
+    Deprecated in favour of using `lead_level_accuracy` with `return_ci=True`.
     """
     assert predictions is not None or logits is not None, "Either predictions or logits must be provided."
     assert predictions is None or logits is None, "Only one of predictions or logits can be provided."
@@ -201,26 +195,6 @@ def pretty_code_density_plot(code_densities          : Counter,
                              scp_statement_csv       : str | Path = "scp_statements.csv",
                              bar_thickness           : float = 0.45,
                              colours                 : tuple = ("#4C9BE8", "#F5A873")):
-    """
-    Horizontal grouped bar‑chart that compares the *n* most common
-    mis‑classified SCP codes with their distribution in the full dataset.
-    Bars are labelled by **code**; a description table sits underneath.
-    -----------------------------------------------------------------------
-    Parameters
-    ----------
-    code_densities        : Counter   – counts for the whole dataset
-    miscl_code_densities  : Counter   – counts for the mis‑classified set
-    n                     : int       – how many top mis‑classified codes
-    n_misclassified       : int       – number of mis‑classified records
-    n_total              : int        – number of records in the dataset
-    relative              : bool      – plot frequencies (%) instead of raw counts
-    scp_statement_csv     : str|Path  – maps Code → Description (PTB‑XL file)
-    bar_thickness         : float     – vertical size of each bar
-    colours               : tuple     – colours for the two groups
-    """
-    # ------------------------------------------------------------------ #
-    # 1. Data wrangling                                                  #
-    # ------------------------------------------------------------------ #
     top_codes = [c for c, _ in miscl_code_densities.most_common(n)]
 
     df = pd.DataFrame({
@@ -241,9 +215,6 @@ def pretty_code_density_plot(code_densities          : Counter,
     else:
         descs = pd.Series("(unknown)", index=df.index)
 
-    # ------------------------------------------------------------------ #
-    # 2. Plot                                                            #
-    # ------------------------------------------------------------------ #
     fig = plt.figure(figsize=(11, 8), constrained_layout=True)
     gs  = fig.add_gridspec(2, 1, height_ratios=[4, 1.4], hspace=0.05)
 
@@ -266,9 +237,6 @@ def pretty_code_density_plot(code_densities          : Counter,
                loc="center right",
                bbox_to_anchor=(0.93, 0.5),
                frameon=False)
-
-    # some breathing room on the left so codes don't get clipped
-    # plt.subplots_adjust(left=0.28)
 
     # --- b) description table ---------------------------------------- #
     tb_ax = fig.add_subplot(gs[1])

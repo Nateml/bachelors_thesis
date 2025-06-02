@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import typer
 
-from src.data.load_ptbdata_new import ALL_LEADS, PRECORDIAL_LEADS
+from src.data.load_ptbdata import ALL_LEADS, PRECORDIAL_LEADS
 from src.evaluation import lead_level_accuracy, set_level_accuracy
 from src.modeling.datasets.siglab_dataset import SigLabDataset
 from src.run import lead_sets

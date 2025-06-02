@@ -12,7 +12,7 @@ import numpy as np
 import typer
 
 from src.config import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
-from src.data import load_ptbdata_new as load_ptbdata
+from src.data import load_ptbdata as load_ptbdata
 
 # from bachelors_thesis.data import load_ptbdata
 from src.data import split_ptbxl

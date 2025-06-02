@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 from src.config import RAW_DATA_DIR
-from src.data.load_ptbdata_new import PRECORDIAL_LEADS
+from src.data.load_ptbdata import PRECORDIAL_LEADS
 import wfdb
 
 

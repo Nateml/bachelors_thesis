@@ -1,10 +1,8 @@
-"""
-Loads the PTB-XL dataset from the source directory. Most of this code has been taken from the PTB-XL example data loading script.
-It is really slow right now, so I will look into optimizing it later.
-Link to the source: https://physionet.org/content/ptb-xl/1.0.3/
-"""
-
 import ast
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+import os
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -34,79 +32,131 @@ AUGMENTED_LEADS = [
 ALL_LEADS = LIMB_LEADS + AUGMENTED_LEADS + PRECORDIAL_LEADS
 
 def load_data(
-        data_path,
-        sampling_rate,
-        limit=None,
-        only_precordial_leads=False,
-        only_normal=True,
-        ):
+        data_path: str,
+        sampling_rate: int = 100,
+        limit: Optional[int] = None,
+        only_precordial_leads: bool = False,
+        only_normal: bool = True,
+        n_workers: Optional[int] = None,
+) -> Tuple[np.ndarray, pd.DataFrame]:
+    """Load PTB‑XL recordings and metadata.
 
-    def get_precordial_lead_indices(path):
-        # Precordial leads
-        precordial_leads = ["V1", "V2", "V3", "V4", "V5", "V6"]
+    Parameters
+    ----------
+    data_path : str
+        Path to the **root** of the extracted PTB‑XL archive, e.g. ``"/datasets/PTB-XL"``.
+    sampling_rate : {100, 500}, default ``500``
+        Desired sampling rate of the loaded signals.
+    limit : int, optional
+        If given, load only the first ``limit`` records (after applying the other
+        filters). Handy while developing.
+    only_precordial_leads : bool, default ``False``
+        If ``True``, keep only the precordial leads V1‑V6.
+    only_normal : bool, default ``True``
+        If ``True``, keep only recordings whose *diagnostic superclass* contains
+        ``"NORM"``.
+    n_workers : int, optional
+        Number of worker threads used to read WFDB files in parallel. ``None``
+        falls back to the default chosen by :pyclass:`concurrent.futures.ThreadPoolExecutor`.
+
+    Returns
+    -------
+    X : np.ndarray of shape ``(n_records, n_samples, n_channels)``
+        The ECG signals.
+    Y : pandas.DataFrame
+        Metadata rows aligned with **X** (same row order).
+    """
+
+    print("[load_data] --------------------------------------------------")
+    print(f"[load_data] data_path                : {data_path}")
+    print(f"[load_data] sampling_rate            : {sampling_rate} Hz")
+    print(f"[load_data] only_precordial_leads    : {only_precordial_leads}")
+    print(f"[load_data] only_normal              : {only_normal}")
+    if limit is not None:
+        print(f"[load_data] row limit                : {limit}")
+    if n_workers is not None:
+        print(f"[load_data] thread pool size         : {n_workers}\n")
+
+    # --------------------------------------------
+    # helpers
+    # --------------------------------------------
+    def _precordial_indices(header: Any) -> List[int]:
+        """Return column indices of precordial leads inside *header*."""
+        return [i for i, lead in enumerate(header.sig_name)
+                if lead in {"V1", "V2", "V3", "V4", "V5", "V6"}]
+
+    def lead_indices_in_order(header: Any, desired_order: List[str]) -> List[int]:
+        name2idx = {name.lower(): i for i, name in enumerate(header.sig_name)}
+        return [name2idx[lead.lower()] for lead in desired_order if lead.lower() in name2idx]
+    
+    def _load_one(path:str, desired_leads) -> np.ndarray:
         header = wfdb.rdheader(path)
-        lead_indices = [i for i, lead in enumerate(header.sig_name)
-                        if lead in precordial_leads]
-        return lead_indices
+        idx = lead_indices_in_order(header, desired_leads)
+        sig, _ = wfdb.rdsamp(path, channels=idx)
+        return sig.astype(np.float32)
+    
+    # --------------------------------------------
+    # metadata
+    # --------------------------------------------
+    meta_path = os.path.join(data_path, "ptbxl_database.csv")
+    print(f"[metadata] Reading {meta_path} ...", end=" ")
+    meta = pd.read_csv(meta_path,
+                       index_col="ecg_id")
+    print("done (", len(meta), "rows )")
+    meta.scp_codes = meta.scp_codes.apply(ast.literal_eval)
 
-    def lead_indices_in_order(header, desired_order):
-        name2idx = {name: i for i, name in enumerate(header.sig_name)}
-        return [name2idx[lead] for lead in desired_order if lead in name2idx]
+    # diagnostic aggregation table
+    diag_path = os.path.join(data_path, "scp_statements.csv")
+    print(f"[metadata] Reading diagnostics map {diag_path} ...", end=" ")
+    diag_map = (
+        pd.read_csv(diag_path, index_col=0)
+        .query("diagnostic == 1")
+    )
+    print("done")
 
-    def load_raw_signals(file_list, path, desired_leads):
-        signals = []
-        for rec in file_list:
-            header = wfdb.rdheader(path + rec)
-            idx = lead_indices_in_order(header, desired_leads)
-            sig, _ = wfdb.rdsamp(path + rec, channels=idx)
-            signals.append(sig)
-
-        return np.stack(signals)  # Shape: (N, T, L)
-
-    # Function to load ECG signal data
-    def load_raw_data(df, sampling_rate, path, lead_set):
-        file_list = df.filename_lr.values if sampling_rate == 100 else df.filename_hr.values
-        data = load_raw_signals(file_list, path, lead_set)
-        return data
-
-    # Load and convert annotation data
-    print("Loading and converting annotation data...")
-    Y = pd.read_csv(data_path + "/ptbxl_database.csv", index_col="ecg_id")
-    Y.scp_codes = Y.scp_codes.apply(lambda x: ast.literal_eval(x))
-
-    if limit:
-        Y = Y.iloc[:limit]
-
-    # Load scp_statements.csv for diagnostic aggregation
-    print("Loading diagnostic aggregation data...")
-    agg_df = pd.read_csv(data_path + "/scp_statements.csv", index_col=0)
-    agg_df = agg_df[agg_df.diagnostic == 1]
-
-    # Function to aggregate diagnostic superclasses
-    def aggregate_diagnostic(y_dic):
-        tmp = []
-        for key in y_dic.keys():
-            if key in agg_df.index:
-                tmp.append(agg_df.loc[key].diagnostic_class)
-        return list(set(tmp))
-
-    # Apply diagnostic superclass
-    print("Applying diagnostic superclass...")
-    Y['diagnostic_superclass'] = Y.scp_codes.apply(aggregate_diagnostic)
+    print("[metadata] Aggregating diagnostic_superclass ...", end=" ")
+    meta["diagnostic_superclass"] = meta.scp_codes.apply(
+        lambda d: [diag_map.loc[k, "diagnostic_class"] for k in d
+                   if k in diag_map.index]
+    )
+    print("done")
 
     if only_normal:
-        Y = Y[Y.diagnostic_superclass.apply(lambda x: "NORM" in x)]
+        before = len(meta)
+        meta = meta[meta.diagnostic_superclass.map(lambda s: "NORM" in s)]
+        print(f"[filter] only_normal=True -> {before} -> {len(meta)} rows")
 
-    # Get the desired leads
-    # This is the order in which the channels will be stored in the .npy file
-    # This order is important for the model to work properly
+    if limit is not None:
+        before = len(meta)
+        meta = meta.iloc[:limit]
+        print(f"[filter] limit={limit} -> {before} -> {len(meta)} rows")
+
+    # choose correct column containing the WFDB file path
+    fname_col = "filename_hr" if sampling_rate == 500 else "filename_lr"
+    filenames = meta[fname_col].to_numpy()
+    full_paths = [os.path.join(data_path, fn) for fn in filenames]
+
+    # Choose the leads to keep
     if only_precordial_leads:
-        lead_set = PRECORDIAL_LEADS
+        # Precordial leads
+        desired_leads = PRECORDIAL_LEADS
     else:
-        lead_set = ALL_LEADS
+        # All leads
+        desired_leads = ALL_LEADS
 
-    # Load raw signal data
-    print("Loading raw signal data...")
-    X = load_raw_data(Y, sampling_rate, data_path, lead_set=lead_set)
+    print(f"[filter] Keeping {len(desired_leads)} leads: {desired_leads}")
 
-    return X, Y
+    # -----------------------------------------------------------------
+    # read signal files in parallel (IO-bound -> threads are fine here)
+    # -----------------------------------------------------------------
+    print(f"[signals] Loading {len(full_paths)} WFDB files with ThreadPoolExecutor ..")
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        signals = list(pool.map(partial(_load_one, desired_leads=desired_leads),
+                                full_paths))
+    print("[signals] Finished loading waveforms.")
+
+    X = np.stack(signals)  # (n_records, n_samples, n_channels)
+    print(f"[signals] X.shape = {X.shape}\n")
+
+    # reset the index to preserve one-to-one mapping with X
+    return X, meta.reset_index(drop=False)
