@@ -1,16 +1,16 @@
-# Signal-Based Lead Identification: Towards Efortless Electrocardiographic Imaging
+# Signals Are All You Need: A Deep Learning Architecture for ECG Lead Identification
 
 ## Abstract
 
-Electrocardiographic imaging (ECGI) provides detailed cardiac activation maps. However, its accessibility is hindered by clinical overheads, one of these being the accurate localisation of the electrodes used to construct a body surface potential map (BSPM). This study addresses this by developing a deep learning model for automated lead identification purely from signal data, as a step towards more general signal-based electrode localisation. A permutation equivariant architecture is introduced that couples a branched convolutional network with a GRU encoder and utilises a series of Set Attention Blocks (SABs) to integrate inter-lead information.
+Although electrocardiographic imaging (ECGI) provides detailed cardiac activation maps, its clinical accessibility remains limited — one key barrier being the accurate localisation of electrodes on the torso to construct a body surface potential map (BSPM). As a step towards eliminating this overhead, this study develops a deep learning model for automated 12-lead ECG lead identification from signal data alone. A permutation equivariant architecture is introduced that couples a branched convolutional network with a GRU encoder and utilises a series of Set Attention Blocks (SABs) to integrate inter-lead information.
 
-Trained using the PTB-XL database, the model achieved an overall lead-level accuracy of 98.5\% [95\% CI 98.2--98.7], and demonstrated moderate robustness across cardiac conditions. Principal component analysis (PCA) showed that the model internalises the precordial V1-V6 arc as well as the horizontal and vertical electrical planes. Gradient-based attribution analysis revealed the Q and R waves to be the key morphological discriminators. Recall for lead aVF was the highest (99.8\%), and lowest for lead V3 (96.7\%). In general, recall for limb/augmented leads (99.2\%) was higher than for precordial leads (97.5\%).
+Trained using the PTB-XL database, the model achieved an overall lead-level accuracy of 98.5% [95% CI 98.2-98.7], and demonstrated moderate robustness across cardiac conditions. Principal component analysis (PCA) showed that the model internalises the precordial V1-V6 arc as well as the horizontal and vertical electrical planes. Gradient-based attribution analysis revealed the Q and R waves to be the key morphological discriminators. Recall for lead aVF was the highest (99.8%), and lowest for lead V3 (96.7%). In general, recall for limb/augmented leads (99.2%) was higher than for precordial leads (97.5%).
 
 To the authors' knowledge, this research presents the first model for signal-based lead identification in the 12-lead ECG, paving the way for continuous electrode localisation and truly imageless ECGI.
 
 # Installation
 
-The project dependencies are listed in `requirements.txt` and can be installed by running the following command:
+The project dependencies are listed in `requirements.txt`. It is recommended to create and activate a virtual environment using `venv` or `virtualenv`, and then install the requirements like so:
 
 ```
 > pip install -r requirements.txt
